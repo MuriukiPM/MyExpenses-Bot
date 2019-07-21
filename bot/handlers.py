@@ -1,12 +1,11 @@
-import requests, json
-
+import requests, json, datetime
 from telegram import  ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 from bot import reply_markups
 from bot.utils import logger
-from bot.config import CHOOSING, TYPING_REPLY, TOKEN, URL_POST
+from bot.config import CHOOSING, TYPING_REPLY, TOKEN, URL_EXPENSE, URL_SORTDESC, UTC_OFFSET
 
 # TODO: space out commands to ease tapping on phone
 # TODO: handler for fallbacks!
@@ -80,8 +79,10 @@ def timestamp(bot, update, user_data):
 	text = ("Select the current time below or type in the timestamp."
 			+"\nOr  /cancel  to return to choose other options."
 			+"\nOr  /home  to return to Main Menu")
-	time = update.message.date
-	currentTime = [[KeyboardButton(str(time))]]
+	#time = update.message.date
+	utc_datetime = datetime.datetime.utcnow()
+	local_datetime = (utc_datetime + datetime.timedelta(hours=UTC_OFFSET)).strftime("%Y-%m-%d %H:%M:%S")
+	currentTime = [[KeyboardButton(local_datetime)]]
 	currentTimeMarkup = ReplyKeyboardMarkup(currentTime, resize_keyboard=True)
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
@@ -89,14 +90,45 @@ def timestamp(bot, update, user_data):
 	return TYPING_REPLY
 
 # Description column
-# TODO: Add keys of most common entries
+# TODO: Add feature: set how many months back to look
+# TODO: Add bot message just before the query to state how far back we are looking
+# TODO: Add a check to see if there is sufficient data depending on number of descr to query
+# TODO: For each of the top ten descriptions, attach the most common amount
 def description(bot, update, user_data):
+	# get the date from 3 months back
+	dt0 = (datetime.datetime.utcnow()+ datetime.timedelta(hours=3))
+	for _ in range(3):  dt0 = subtract_one_month(dt0)
+	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:10]
+	top_descr = []
+	# send a get request to obtain top ten results in a json
+	try:
+		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+		r = requests.get(URL_SORTDESC+date)
+		response = r.json() 
+		if response['Success'] is not True:     # some error 
+			text = ("Failed!"
+					+"\nComment: " +response['Comment']
+					+"\nError: "+response['Error']+".")
+		else:       # no errors
+			# append the top ten descriptions to the reply markup list
+			for descr in response['Data']:
+				top_descr.append([KeyboardButton(descr['Description'])])
+			reply_markup = ReplyKeyboardMarkup(top_descr, resize_keyboard=True)
+			text = ("Select a description from below or type in the description. Or  /cancel  to return to choose other options."
+					+"\nOr  /home  to return to Main Menu")
+	except Exception as e:
+		text = ("Something went wrong."
+				+"\n"
+				+"\nNo connection to the db server."
+				+"\n"
+				+"Type in the description. Or  /cancel  to return to choose other options."
+				+"\nOr  /home  to return to Main Menu")   
+		logger.info(e)
+		reply_markup = ReplyKeyboardRemove()
 	user_data['key'] = "Description"
-	text = ("Type in the description. Or  /cancel  to return to choose other options."
-			+"\nOr  /home  to return to Main Menu")
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
-					reply_markup = ReplyKeyboardRemove())
+					reply_markup = reply_markup)
 	return TYPING_REPLY
 
 # Proof column
@@ -129,7 +161,7 @@ def post(bot, update, user_data):
 		# Initiate the POST. If successfull, you will get a primary key value and a Success bool as True
 		try:
 			bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
-			r = requests.post(URL_POST,
+			r = requests.post(URL_EXPENSE,
 							data={	'timestamp':user_data['input']['Timestamp'],
 									'description':user_data['input']['Description'],
 									'proof':user_data['input']['Proof'],
@@ -206,3 +238,9 @@ def value(bot, update, user_data):
 def error(bot, update, error):
 	"""Log Errors caused by Updates."""
 	logger.warning('Update "%s" caused error "%s"', update, error)
+
+# How many months back to look.
+def subtract_one_month(dt0):
+	dt1 = dt0.replace(day=1)
+	dt2 = dt1 - datetime.timedelta(days=1)
+	return dt2.replace(day=1)
