@@ -35,6 +35,8 @@ def main():
                                     pass_user_data=True),
                         RegexHandler('Description', handlers.description,
                                     pass_user_data=True),
+                        RegexHandler('Category', handlers.category,
+                                    pass_user_data=True),
                         RegexHandler('Proof', handlers.proof,
                                     pass_user_data=True),
                         RegexHandler('Amount', handlers.amount,

@@ -5,7 +5,7 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 from bot import reply_markups
 from bot.utils import logger
-from bot.config import CHOOSING, TYPING_REPLY, TOKEN, URL_EXPENSE, URL_SORTDESC, UTC_OFFSET
+from bot.config import CHOOSING, TYPING_REPLY, TOKEN, URL_EXPENSE, URL_SORTDESC, URL_CATEGORIES, UTC_OFFSET
 
 # TODO: space out commands to ease tapping on phone
 # TODO: handler for fallbacks!
@@ -34,9 +34,10 @@ def verify(bot, update, user_data):
 		user_data['input']['Timestamp'] = []
 		user_data['input']['Description'] = []
 		user_data['input']['Proof'] = []
+		user_data['input']['Category'] = []
 		user_data['input']['Amount'] = []
 		user_data['key'] = []
-		#TS : NOTSMKP, DESCR : NODESCRMKP ,PRF : NOPRFMKP, AMT : NOAMTMKP 
+		#TS : NOTSMKP, DESCR : NODESCRMKP ,PRF : NOPRFMKP, CAT : NOCATMKP, AMT : NOAMTMKP 
 		user_data['markups'] = dict(zip([key for key, values in user_data['input'].items()],
 										reply_markups.expenseFlowMarkups))
 		# Do other background stuff
@@ -131,6 +132,40 @@ def description(bot, update, user_data):
 					reply_markup = reply_markup)
 	return TYPING_REPLY
 
+# Category column
+def category(bot, update, user_data):
+	categories = []
+	# get the categories
+	try:
+		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+		r = requests.get(URL_CATEGORIES)
+		response = r.json() 
+		if response['Success'] is not True:     # some error 
+			text = ("Failed!"
+					+"\nComment: " +response['Comment']
+					+"\nError: "+response['Error']+".")
+		else:       # no errors
+			# append the top ten descriptions to the reply markup list
+			for cateogry in response['Data']:
+				categories.append([KeyboardButton(cateogry['Category'])])
+			reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
+			text = ("Select a category from below or type in the category. Or  /cancel  to return to choose other options."
+					+"\nOr  /home  to return to Main Menu")
+	except Exception as e:
+		text = ("Something went wrong."
+				+"\n"
+				+"\nNo connection to the db server."
+				+"\n"
+				+"Type in the category. Or  /cancel  to return to choose other options."
+				+"\nOr  /home  to return to Main Menu")   
+		logger.info(e)
+		reply_markup = ReplyKeyboardRemove()
+	user_data['key'] = "Category" #update the check for most recently updated field
+	bot.send_message(chat_id=update.message.chat_id,
+					text = text,
+					reply_markup = reply_markup)
+	return TYPING_REPLY
+
 # Proof column
 def proof(bot, update, user_data):
 	user_data['key'] = "Proof"
@@ -155,9 +190,9 @@ def amount(bot, update, user_data):
 
 # Post values to POST method on API
 def post(bot, update, user_data):
-	logger.info(user_data['input'])
-	# Check for empty fields. Description and Amount has to be filled always
-	if user_data['input']['Amount'] and user_data['input']['Description'] :
+	#logger.info(user_data['input'])
+	# Check for empty fields. Description, Amount, Category has to be filled always
+	if user_data['input']['Amount'] and user_data['input']['Description'] and user_data['input']['Category']:
 		# Initiate the POST. If successfull, you will get a primary key value and a Success bool as True
 		try:
 			bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
@@ -165,7 +200,8 @@ def post(bot, update, user_data):
 							data={	'timestamp':user_data['input']['Timestamp'],
 									'description':user_data['input']['Description'],
 									'proof':user_data['input']['Proof'],
-									'amount':user_data['input']['Amount']
+									'amount':user_data['input']['Amount'],
+									'category':user_data['input']['Category']
 									}
 								)
 			response = r.json() 
@@ -178,6 +214,7 @@ def post(bot, update, user_data):
 				user_data['input']['Timestamp'] = []
 				user_data['input']['Description'] = []
 				user_data['input']['Proof'] = []
+				user_data['input']['Category'] = []
 				user_data['input']['Amount'] = []
 				text = ("Post Successful! Post id is: "+response['Comment']
 						+"\nPlease select an option from below.")
@@ -189,10 +226,6 @@ def post(bot, update, user_data):
 	else:	# fields empty or amount empty
 		text = ("Please complete filling in the fields.")
 	
-	# bot.send_message(chat_id=update.message.chat_id,
-    #                 text = "Posted! Please select an option from below.",
-    #                 reply_markup = reply_markups.newExpenseMarkup)
-	
 	bot.send_message(chat_id=update.message.chat_id,
                     text = text,
                     reply_markup = reply_markups.newExpenseMarkup)
@@ -200,6 +233,7 @@ def post(bot, update, user_data):
 
 # Confirmation of entered value
 def verifyValue(bot, update, user_data):
+	# grab the reply text and parse to relevant key
 	user_data['input'][user_data['key']] =  update.message.text
 	text = ("Received '"+update.message.text+"' as your "+user_data['key']+" value."
 			+"\n"
@@ -213,11 +247,12 @@ def verifyValue(bot, update, user_data):
 			+"\nTimestamp: "+str(user_data['input']['Timestamp'])
 			+"\nDescription: "+str(user_data['input']['Description'])
 			+"\nProof: "+str(user_data['input']['Proof'])
+			+"\nCategory: "+str(user_data['input']['Category'])
 			+"\nAmount: "+str(user_data['input']['Amount'])
 			+"\n"
 			+"\nType  /submit  to post or type in a different value to change the "
 			+user_data['key']+" value." 
-			+"\nOr  /cancel  to Choose other entries change")
+			+"\nOr  /cancel  to Choose other entries to change")
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = markup) 

@@ -6,24 +6,29 @@ mainMenu = [[KeyboardButton("New Expense")],
             [KeyboardButton("View Expenses"),KeyboardButton("Search Expenses")]]
 
 newExpense = [  [KeyboardButton("Timestamp"), KeyboardButton("Description")],
-                [KeyboardButton("Proof"), KeyboardButton("Amount")],
-                [KeyboardButton("Submit"), KeyboardButton("Abort")]]
+                [KeyboardButton("Proof"), KeyboardButton("Category")],
+                [KeyboardButton("Amount"), KeyboardButton("Submit")], 
+                [KeyboardButton("Abort")]]
 
 newExpenseNoTs = [
-    [KeyboardButton("Description"), KeyboardButton("Proof"), KeyboardButton("Amount")],
-    [KeyboardButton("Submit"), KeyboardButton("Abort")]]
+    [KeyboardButton("Description"), KeyboardButton("Proof"), KeyboardButton("Category")],
+    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
 
 newExpenseNoDescr = [
-    [KeyboardButton("Timestamp"), KeyboardButton("Proof"), KeyboardButton("Amount")],
-    [KeyboardButton("Submit"), KeyboardButton("Abort")]]
+    [KeyboardButton("Timestamp"), KeyboardButton("Proof"), KeyboardButton("Category")],
+    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
 
 newExpenseNoPrf = [
-    [KeyboardButton("Timestamp"), KeyboardButton("Description"), KeyboardButton("Amount")],
-    [KeyboardButton("Submit"), KeyboardButton("Abort")]]
+    [KeyboardButton("Timestamp"), KeyboardButton("Description"), KeyboardButton("Category")],
+    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
 
 newExpenseNoAmt = [
     [KeyboardButton("Timestamp"), KeyboardButton("Description"), KeyboardButton("Proof")],
-    [KeyboardButton("Submit"), KeyboardButton("Abort")]]
+    [KeyboardButton("Category"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
+
+newExpenseNoCat = [
+    [KeyboardButton("Timestamp"), KeyboardButton("Description"), KeyboardButton("Proof")],
+    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
 
 newExpenseNoAmtMarkup = ReplyKeyboardMarkup(newExpenseNoAmt, resize_keyboard=True)
 
@@ -33,9 +38,12 @@ newExpenseNoDescrMarkup = ReplyKeyboardMarkup(newExpenseNoDescr, resize_keyboard
 
 newExpenseNoTsMarkup = ReplyKeyboardMarkup(newExpenseNoTs, resize_keyboard=True)
 
+newExpenseNoCatMarkup = ReplyKeyboardMarkup(newExpenseNoCat, resize_keyboard=True)
+
 newExpenseMarkup = ReplyKeyboardMarkup(newExpense, resize_keyboard=True)
 
 mainMenuMarkup = ReplyKeyboardMarkup(mainMenu, resize_keyboard=True)
 
-expenseFlowMarkups = [	newExpenseNoTsMarkup, newExpenseNoDescrMarkup,
-                        newExpenseNoPrfMarkup, newExpenseNoAmtMarkup]
+# must follow a certain order
+expenseFlowMarkups = [	newExpenseNoTsMarkup, newExpenseNoDescrMarkup, newExpenseNoPrfMarkup, 
+                        newExpenseNoCatMarkup, newExpenseNoAmtMarkup]
