@@ -6,8 +6,9 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, RegexHandler, ConversationHandler, Filters
 
 from bot.utils import logger
-from bot.config import TOKEN, CHOOSING, TYPING_REPLY
+from bot.config import TOKEN
 from bot import handlers
+from bot.globals import CHOOSING, TYPING_REPLY
 
 def main():
     # Set up the Updater

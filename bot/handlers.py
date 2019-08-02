@@ -5,7 +5,8 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 from bot import reply_markups
 from bot.utils import logger
-from bot.config import CHOOSING, TYPING_REPLY, TOKEN, URL_EXPENSE, URL_SORTDESC, URL_CATEGORIES, UTC_OFFSET
+from bot.config import  TOKEN, URL_EXPENSE, URL_SORTDESC, URL_CATEGORIES
+from bot.globals import *
 
 # TODO: space out commands to ease tapping on phone
 # TODO: handler for fallbacks!
