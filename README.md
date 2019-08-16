@@ -1,7 +1,7 @@
 ### To run the bot
- - create a file config.py file in the bot/ subfolder.
- - in your config.py file, add the config secrets listed in 'Config' below
- - then run:
+ 1. Rename the `config_sample.py` file under the bot/ subfolder to `config.py`
+ 2. in your config.py file, add the config secrets listed in 'Config' below
+ 3. then run:
 
    $ python myexpensesbot.py
 
