@@ -261,7 +261,7 @@ def verifyValue(bot, update, user_data):
 			if (s.replace('s','') == 'week'):
 				dt1 = dt0 - datetime.timedelta(days=X*7)
 			data = dt1.strftime("%Y-%m-%d %H:%M:%S") #get string format
-	logger.info(data)
+	#logger.info(data)
 	#parse to relevant key
 	user_data['input'][user_data['key']] =  data
 	text = ("Received '"+data+"' as your "+user_data['key']+" value."
