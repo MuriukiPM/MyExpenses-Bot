@@ -1,9 +1,8 @@
-##
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 # Predefine Main menu keyboard
 mainMenu = [[KeyboardButton("New Expense")], 
-            [KeyboardButton("View Expenses"),KeyboardButton("Search Expenses")]]
+            [KeyboardButton("Expenses Report"),KeyboardButton("Search Expenses")]]
 
 newExpense = [  [KeyboardButton("Timestamp"), KeyboardButton("Description")],
                 [KeyboardButton("Proof"), KeyboardButton("Category")],
@@ -29,6 +28,8 @@ newExpenseNoAmt = [
 newExpenseNoCat = [
     [KeyboardButton("Timestamp"), KeyboardButton("Description"), KeyboardButton("Proof")],
     [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
+
+expensesReport = []
 
 newExpenseNoAmtMarkup = ReplyKeyboardMarkup(newExpenseNoAmt, resize_keyboard=True)
 

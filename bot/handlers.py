@@ -76,10 +76,16 @@ def new (bot, update, user_data):
 
 # Timestamp column: YYYY-MM-DD HH:MM:SS
 # TODO: Use /done to navigate back to new()
+# TODO: Add options to select time from X <timeframe> ago eg 1 hour, 2 weeks
 def timestamp(bot, update, user_data):
 	user_data['key'] = "Timestamp"
-	text = ("Select the current time below or type in the timestamp."
+	text = ("Select the current time below,"
+			+"\nor type in the timestamp in the format 'YYYY-MM-DD HH:MM:SS'"
+			+"\nor type how long ago the expense occured in the format"
+			+"\n'<digit> <timeframe>' for example, 1 hour, 6 days, 10 weeks."
+			+"\n"
 			+"\nOr  /cancel  to return to choose other options."
+			+"\n"
 			+"\nOr  /home  to return to Main Menu")
 	#time = update.message.date
 	utc_datetime = datetime.datetime.utcnow()
@@ -100,7 +106,7 @@ def description(bot, update, user_data):
 	# get the date from 3 months back
 	dt0 = (datetime.datetime.utcnow()+ datetime.timedelta(hours=3))
 	for _ in range(3):  dt0 = subtract_one_month(dt0)
-	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:10]
+	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:10] #only the date, not time
 	top_descr = []
 	# send a get request to obtain top ten results in a json
 	try:
@@ -178,7 +184,6 @@ def proof(bot, update, user_data):
 	return TYPING_REPLY
 
 # Amount column
-# TODO: Join confirmation command with submit command.
 # TODO: Add keys of most common amounts
 def amount(bot, update, user_data):
 	user_data['key'] = "Amount"
@@ -198,18 +203,19 @@ def post(bot, update, user_data):
 		try:
 			bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 			r = requests.post(URL_EXPENSE,
-							data={	'timestamp':user_data['input']['Timestamp'],
-									'description':user_data['input']['Description'],
-									'proof':user_data['input']['Proof'],
-									'amount':user_data['input']['Amount'],
-									'category':user_data['input']['Category']
+							json={	"Timestamp":user_data['input']['Timestamp'],
+									"Description":user_data['input']['Description'],
+									"Proof":user_data['input']['Proof'],
+									"Amount":user_data['input']['Amount'],
+									"Category":user_data['input']['Category']
 									}
 								)
 			response = r.json() 
+			#logger.info(response)
 			if response['Success'] is not True:     # some error 
 				text = ("Failed!"
 						+"\nComment: " +response['Comment']
-						+"\nError: "+response['Error']+".")
+						+"\nError: "+response['Error']['Message']+".")
 			else:       # no errors
 				# empty the fields
 				user_data['input']['Timestamp'] = []
@@ -223,7 +229,7 @@ def post(bot, update, user_data):
 			text = ("Something went wrong."
 					+"\n"
 					+"\nNo connection to the server.")   
-			logger.info(e)
+			logger.info("Post failed with error: "+str(e))
 	else:	# fields empty or amount empty
 		text = ("Please complete filling in the fields.")
 	
@@ -234,16 +240,38 @@ def post(bot, update, user_data):
 
 # Confirmation of entered value
 def verifyValue(bot, update, user_data):
-	# grab the reply text and parse to relevant key
-	user_data['input'][user_data['key']] =  update.message.text
-	text = ("Received '"+update.message.text+"' as your "+user_data['key']+" value."
+	#grab the reply text 
+	data = update.message.text
+
+	# if the timestamp was just set
+	if (user_data['key'] == 'Timestamp'):
+		try:
+			datetime.datetime.strptime(data,"%Y-%m-%d %H:%M:%S")
+		except ValueError: #time passed given
+			s = update.message.text.split() #split on space
+			X = int(s[0])
+			s = s[1]
+			#get current datetime
+			dt0 = (datetime.datetime.utcnow()+ datetime.timedelta(hours=3))
+			#go back in time. Filter 's' from keywords if present
+			if (s.replace('s','') == 'hour'):
+				dt1 = dt0 - datetime.timedelta(seconds=X*3600)
+			if (s.replace('s','') == 'day'):
+				dt1 = dt0 - datetime.timedelta(days=X)
+			if (s.replace('s','') == 'week'):
+				dt1 = dt0 - datetime.timedelta(days=X*7)
+			data = dt1.strftime("%Y-%m-%d %H:%M:%S") #get string format
+	logger.info(data)
+	#parse to relevant key
+	user_data['input'][user_data['key']] =  data
+	text = ("Received '"+data+"' as your "+user_data['key']+" value."
 			+"\n"
 			+"\nType  /done  to proceed or type in a different value to change the "
 			+user_data['key']+" value." 
 			+"\nOr  /cancel  to choose other options ")
 	markup = ReplyKeyboardRemove()
 	if (user_data['key'] == 'Amount'):
-		text = ("Received '"+update.message.text+"' as your "+user_data['key']+" value."
+		text = ("Received '"+data+"' as your "+user_data['key']+" value."
 			+"\nCurrent entries: "
 			+"\nTimestamp: "+str(user_data['input']['Timestamp'])
 			+"\nDescription: "+str(user_data['input']['Description'])

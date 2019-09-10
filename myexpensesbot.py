@@ -10,6 +10,12 @@ from bot.config import TOKEN
 from bot import handlers
 from bot.globals import CHOOSING, TYPING_REPLY
 
+# TODO: Add expenses report conversation flow
+# TODO: Add step to end session/after period of inactivity
+# to require verification on next session
+# TODO: Add SMS verification
+# TODO: Ask for monthly budgetary limits per category
+# TODO: Add output message showing % of budgetary limit used per category
 def main():
     # Set up the Updater
     updater = Updater(TOKEN)
