@@ -95,6 +95,7 @@ def timestamp(bot, update, user_data):
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = currentTimeMarkup)
+	
 	return TYPING_REPLY
 
 # Description column
@@ -250,16 +251,13 @@ def verifyValue(bot, update, user_data):
 		except ValueError: #time passed given
 			s = update.message.text.split() #split on space
 			X = int(s[0])
-			s = s[1]
+			s = s[1].lower() #the keyword. Lowercase for standardization
 			#get current datetime
 			dt0 = (datetime.datetime.utcnow()+ datetime.timedelta(hours=3))
 			#go back in time. Filter 's' from keywords if present
-			if (s.replace('s','') == 'hour'):
-				dt1 = dt0 - datetime.timedelta(seconds=X*3600)
-			if (s.replace('s','') == 'day'):
-				dt1 = dt0 - datetime.timedelta(days=X)
-			if (s.replace('s','') == 'week'):
-				dt1 = dt0 - datetime.timedelta(days=X*7)
+			if (s.replace('s','') == 'hour'): dt1 = dt0 - datetime.timedelta(seconds=X*3600)
+			if (s.replace('s','') == 'day'): dt1 = dt0 - datetime.timedelta(days=X)
+			if (s.replace('s','') == 'week'): dt1 = dt0 - datetime.timedelta(days=X*7)
 			data = dt1.strftime("%Y-%m-%d %H:%M:%S") #get string format
 	#logger.info(data)
 	#parse to relevant key
