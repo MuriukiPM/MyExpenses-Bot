@@ -1,3 +1,5 @@
+from os import environ as env
+
 import requests, json, datetime
 from telegram import  ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
@@ -5,7 +7,6 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 from bot import reply_markups
 from bot.utils import logger
-from bot.config import  TOKEN, URL_EXPENSE, URL_SORTDESC, URL_CATEGORIES
 from bot.globals import *
 
 # TODO: space out commands to ease tapping on phone
@@ -112,7 +113,7 @@ def description(bot, update, user_data):
 	# send a get request to obtain top ten results in a json
 	try:
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
-		r = requests.get(URL_SORTDESC+date)
+		r = requests.get(env.get("URL_SORTDESC")+date)
 		response = r.json() 
 		if response['Success'] is not True:     # some error 
 			text = ("Failed!"
@@ -146,7 +147,7 @@ def category(bot, update, user_data):
 	# get the categories
 	try:
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
-		r = requests.get(URL_CATEGORIES)
+		r = requests.get(env.get("URL_CATEGORIES"))
 		response = r.json() 
 		if response['Success'] is not True:     # some error 
 			text = ("Failed!"
@@ -203,7 +204,7 @@ def post(bot, update, user_data):
 		# Initiate the POST. If successfull, you will get a primary key value and a Success bool as True
 		try:
 			bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
-			r = requests.post(URL_EXPENSE,
+			r = requests.post(env.get("URL_EXPENSE"),
 							json={	"Timestamp":user_data['input']['Timestamp'],
 									"Description":user_data['input']['Description'],
 									"Proof":user_data['input']['Proof'],

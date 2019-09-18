@@ -2,11 +2,11 @@
 """
 @ author: PMuriuki
 """
+from os import environ as env
 from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, RegexHandler, ConversationHandler, Filters
 
 from bot.utils import logger
-from bot.config import TOKEN
 from bot import handlers
 from bot.globals import CHOOSING, TYPING_REPLY
 
@@ -18,7 +18,7 @@ from bot.globals import CHOOSING, TYPING_REPLY
 # TODO: Add output message showing % of budgetary limit used per category
 def main():
     # Set up the Updater
-    updater = Updater(TOKEN)
+    updater = Updater(env.get("TOKEN"))
     dispatcher = updater.dispatcher
     
     # Add dispatchers
