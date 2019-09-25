@@ -35,7 +35,7 @@ def main():
 
     # Enter new expense
     dispatcher.add_handler(ConversationHandler(
-        entry_points=[RegexHandler('New Expense', handlers.new,
+        entry_points=[RegexHandler('New Expense', handlers.newExpense,
                                     pass_user_data=True)],
         states = {
             CHOOSING : [RegexHandler('Timestamp', handlers.timestamp,
@@ -48,7 +48,7 @@ def main():
                                     pass_user_data=True),
                         RegexHandler('Amount', handlers.amount,
                                     pass_user_data=True),
-                        RegexHandler('Submit', handlers.post,
+                        RegexHandler('Submit', handlers.postExpense,
                                     pass_user_data=True),
                         RegexHandler('Abort', handlers.home,
                                     pass_user_data=True)],
@@ -56,15 +56,46 @@ def main():
                                           pass_user_data=True),
                             CommandHandler('home', handlers.home, 
                                             pass_user_data=True),
-                            CommandHandler('cancel', handlers.new, 
+                            CommandHandler('cancel', handlers.newExpense, 
                                             pass_user_data=True),
                             CommandHandler('done', handlers.value,
                                             pass_user_data=True),
-                            CommandHandler('submit', handlers.post,
+                            CommandHandler('submit', handlers.postExpense,
                                             pass_user_data=True)],
             },
         fallbacks=[]
         ))
+    
+    # Set limits for categories of expenses
+    dispatcher.add_handler(ConversationHandler(
+        entry_points=[RegexHandler('Expenses Report', handlers.expensesReport,
+                                    pass_user_data=True)],
+        states = {
+            CHOOSING : [RegexHandler('Abort', handlers.home,
+                                    pass_user_data=True),
+                        RegexHandler('Set limits', handlers.setLimits,
+                                    pass_user_data=True),
+                        RegexHandler('View limits', handlers.viewLimits,
+                                    pass_user_data=True),
+                        CommandHandler('home', handlers.home, 
+                                    pass_user_data=True),
+                        CommandHandler('cancel', handlers.expensesReport, 
+                                    pass_user_data=True),
+                        MessageHandler(Filters.text, handlers.limitKey,
+                                    pass_user_data=True),
+                        CommandHandler('done', handlers.reviewLimits,
+                                    pass_user_data=True)],
+            TYPING_REPLY : [MessageHandler(Filters.text, handlers.limitValue,
+                                            pass_user_data=True),
+                            CommandHandler('submit', handlers.postLimits,
+                                                pass_user_data=True),
+                            CommandHandler('edit', handlers.setLimits, 
+                                            pass_user_data=True),
+                            CommandHandler('home', handlers.home, 
+                                            pass_user_data=True)],
+        },
+        fallbacks=[]
+    ))
     
     # log errors
     dispatcher.add_error_handler(handlers.error)
