@@ -6,7 +6,7 @@ from os import environ as env
 from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, RegexHandler, ConversationHandler, Filters
 
-from bot.utils import logger
+from libs.utils import logger
 from bot import handlers
 from bot.globals import CHOOSING, TYPING_REPLY
 
@@ -23,6 +23,7 @@ def main():
     
     # Add dispatchers
     # Start and verify
+    # TODO: add a "sorry, that's not a valid choice" fallback
     dispatcher.add_handler(ConversationHandler(
         entry_points=[CommandHandler('start', handlers.start,
                                     pass_user_data=True)],
@@ -34,6 +35,7 @@ def main():
         ))
 
     # Enter new expense
+    # TODO: add a "sorry, that's not a valid choice" fallback
     dispatcher.add_handler(ConversationHandler(
         entry_points=[RegexHandler('New Expense', handlers.newExpense,
                                     pass_user_data=True)],
@@ -67,15 +69,22 @@ def main():
         ))
     
     # Set limits for categories of expenses
+    # TODO: add a "sorry, that's not a valid choice" fallback
     dispatcher.add_handler(ConversationHandler(
         entry_points=[RegexHandler('Expenses Report', handlers.expensesReport,
                                     pass_user_data=True)],
         states = {
             CHOOSING : [RegexHandler('Abort', handlers.home,
                                     pass_user_data=True),
-                        RegexHandler('Set limits', handlers.setLimits,
+                        RegexHandler('Set Limits', handlers.setLimits,
                                     pass_user_data=True),
-                        RegexHandler('View limits', handlers.viewLimits,
+                        RegexHandler('Update Limits', handlers.updateLimits,
+                                    pass_user_data=True),
+                        RegexHandler('View Limits', handlers.viewLimits,
+                                    pass_user_data=True),
+                        RegexHandler('View Expenses', handlers.viewExpenses,
+                                    pass_user_data=True),
+                        CommandHandler('update', handlers.updateLimitsnoRVW, 
                                     pass_user_data=True),
                         CommandHandler('home', handlers.home, 
                                     pass_user_data=True),
@@ -85,11 +94,17 @@ def main():
                                     pass_user_data=True),
                         CommandHandler('done', handlers.reviewLimits,
                                     pass_user_data=True)],
-            TYPING_REPLY : [MessageHandler(Filters.text, handlers.limitValue,
+            TYPING_REPLY : [MessageHandler(Filters.regex('^[0-9]'), handlers.limitValue,
                                             pass_user_data=True),
+                            MessageHandler(Filters.regex('^[a-zA-Z]'), handlers.confirmMonth,
+                                            pass_user_data=True),
+                            CommandHandler('select', handlers.selectMonth,
+                                        pass_user_data=True),
                             CommandHandler('submit', handlers.postLimits,
-                                                pass_user_data=True),
+                                            pass_user_data=True),
                             CommandHandler('edit', handlers.setLimits, 
+                                            pass_user_data=True),
+                            CommandHandler('cancel', handlers.expensesReport, 
                                             pass_user_data=True),
                             CommandHandler('home', handlers.home, 
                                             pass_user_data=True)],

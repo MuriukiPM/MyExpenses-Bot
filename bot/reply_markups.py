@@ -29,9 +29,14 @@ newExpenseNoCat = [
     [KeyboardButton("Timestamp"), KeyboardButton("Description"), KeyboardButton("Proof")],
     [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
 
-expensesReport = [[KeyboardButton("Set limits")],
-                [KeyboardButton("View limits")],
+expensesReport = [[KeyboardButton("Set Limits")],
+                [KeyboardButton("View Limits")],
+                [KeyboardButton("Update Limits")],
+                [KeyboardButton("View Expenses")],
                 [KeyboardButton("Abort")]]
+
+setLimits = [[KeyboardButton("View Limits")],
+             [KeyboardButton("Update Limits")]]
 
 newExpenseNoAmtMarkup = ReplyKeyboardMarkup(newExpenseNoAmt, resize_keyboard=True)
 
@@ -46,6 +51,8 @@ newExpenseNoCatMarkup = ReplyKeyboardMarkup(newExpenseNoCat, resize_keyboard=Tru
 expensesReportMarkup = ReplyKeyboardMarkup(expensesReport, resize_keyboard=True)
 
 newExpenseMarkup = ReplyKeyboardMarkup(newExpense, resize_keyboard=True)
+
+setLimitsMarkup = ReplyKeyboardMarkup(setLimits, resize_keyboard=True)
 
 mainMenuMarkup = ReplyKeyboardMarkup(mainMenu, resize_keyboard=True)
 

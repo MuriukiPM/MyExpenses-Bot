@@ -7,7 +7,7 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup
 import pymongo
 
 from bot import reply_markups
-from bot.utils import logger, convertJson, subtract_one_month
+from libs.utils import logger, convertJson, convertExp_Lim, subtract_one_month, config
 from bot.globals import *
 
 # TODO: space out commands to ease tapping on phone
@@ -27,10 +27,15 @@ def start(bot, update, user_data):
 	
 	return TYPING_REPLY
 
-# verify identity
+# verify identity and initialise various stuff
 # TODO: limit number of retries?
+# TODO: streamline this a bit more
 def verify(bot, update, user_data):
 	verificationNumber = update.message.text
+	# env configs
+	params = config("./config.ini", "Environment")
+	params_dev = config("./config.ini", "Dev")
+	if params["mode"]=="dev": verificationNumber = params_dev["chatid"]
 	if verificationNumber == str(update.message.from_user.id):
 		# Initialise some variables
 		user_data['input'] = {}
@@ -63,7 +68,10 @@ def verify(bot, update, user_data):
 # Conversation end
 def home(bot, update, user_data):
 	chat_ID = str(update.message.from_user.id)
+	# end of conv, so clear some stuff
 	user_data['currentExpCat'] = []
+	user_data['limits'] = {}
+	#send
 	bot.send_message(chat_id=chat_ID,
 		text="Main Options",
 		reply_markup = reply_markups.mainMenuMarkup)
@@ -80,7 +88,7 @@ def newExpense (bot, update, user_data):
 
 # Timestamp column: YYYY-MM-DD HH:MM:SS
 # TODO: Use /done to navigate back to new()
-# TODO: Add options to select time from X <timeframe> ago eg 1 hour, 2 weeks
+# TODO: tapping timestamp directly sets the variable, ask for confirmation
 def timestamp(bot, update, user_data):
 	user_data['currentExpCat'] = "Timestamp"
 	text = ("Select the current time below,"
@@ -108,8 +116,9 @@ def timestamp(bot, update, user_data):
 # TODO: Add a check to see if there is sufficient data depending on number of descr to query
 # TODO: For each of the top ten descriptions, attach the most common amount
 def description(bot, update, user_data):
-	# get the date from 3 months back
-	dt0 = (datetime.datetime.utcnow()+ datetime.timedelta(hours=3))
+	#get the local time
+	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
+	# get the date from 3 months back from now
 	for _ in range(3):  dt0 = subtract_one_month(dt0)
 	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:10] #only the date, not time
 	top_descr = []
@@ -181,6 +190,7 @@ def category(bot, update, user_data):
 	return TYPING_REPLY
 
 # Proof column
+# TODO: Accept image, base64 encode, return string -- or not (string too long)
 def proof(bot, update, user_data):
 	user_data['currentExpCat'] = "Proof"
 	text = ("Type in the proof. Or  /cancel  to choose other options."
@@ -205,14 +215,13 @@ def amount(bot, update, user_data):
 # TODO: On successful submit, for all limits selected, display value and
 # if no threshold set, ask if user wants to set the limits
 def postExpense(bot, update, user_data):
-	#logger.info(user_data['input'])
 	# Check for empty fields. Timestamp, Amount, Category has to be filled always
 	if user_data['input']['Amount'] and user_data['input']['Timestamp'] and user_data['input']['Category']:
 		# Initiate the POST. If successfull, you will get a primary key value
 		# and a Success bool as True
 		try:
 			bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
-			r = requests.post(env.get("URL_EXPENSE"),
+			r = requests.post(env.get("URL_POST_EXPENSE"),
 							json={	"Timestamp":user_data['input']['Timestamp'],
 									"Description":user_data['input']['Description'],
 									"Proof":user_data['input']['Proof'],
@@ -246,6 +255,7 @@ def postExpense(bot, update, user_data):
 	bot.send_message(chat_id=update.message.chat_id,
                     text = text,
                     reply_markup = reply_markups.newExpenseMarkup)
+	
 	return CHOOSING
 
 # Confirmation of entered value
@@ -314,7 +324,7 @@ def expensesReport (bot, update, user_data):
 
 # set limits
 def setLimits(bot,update, user_data):
-	#get current categories if not already fetched
+	#get current categories from db if not already fetched
 	if len(user_data['limits']) == 0:
 		categories = []
 		try:
@@ -368,16 +378,21 @@ def limitKey(bot, update, user_data):
 	return TYPING_REPLY
 
 # update the limit value
+# TODO: better error message on empty category tracker
 def limitValue(bot, update, user_data):
 	data = update.message.text #grab the reply text
 	#update the limit value
-	user_data['limits'][user_data['currentLimitCat']] =  data
-	text = ("Received "+data+" as your "+user_data['currentLimitCat']+" limit value."
+	if user_data['currentLimitCat'] == []:
+		text = ("You have made an incorrect selection")
+		reply_markup = reply_markups.expensesReportMarkup
+	else:
+		user_data['limits'][user_data['currentLimitCat']] =  data
+		text = ("Received "+data+" as your "+user_data['currentLimitCat']+" limit value."
 			+"\nChoose the next category to update." 
 			"\nOr type  /done  to review." 
 			+"\nOr type /home to return to Main Menu")
-	categories = [[KeyboardButton(key)] for key in user_data['limits'].keys()]
-	reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
+		categories = [[KeyboardButton(key)] for key in user_data['limits'].keys()]
+		reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = reply_markup)
@@ -400,12 +415,18 @@ def reviewLimits(bot, update, user_data):
 	return TYPING_REPLY
 
 # Post the limit values to a db somewhere
-# TODO: complete this
-# TODO: Add check for all empty values
-# TODO: update flow to include updating
+# TODO: Deal with failed post better
+# TODO: Use env vars instead of config
 def postLimits(bot, update, user_data):
-	cacert_path = '/home/peterm/Desktop/Temp/cacert.pem'
+	# env configs
+	params = config("./config.ini", "Environment")
+	cacert_path = None
+	if (params["mode"] == "dev"):
+		dirname = env.get("HOME", "")
+		filename = 'cacert.pem'
+		cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
 	try: 
+		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 		client = pymongo.MongoClient(env.get("MONGO_HOST"),
 									ssl=True,
 									ssl_ca_certs=cacert_path)
@@ -413,29 +434,49 @@ def postLimits(bot, update, user_data):
 		collection = db.get_collection('sample')
 		res = collection.find_one({"_id":update.message.chat_id})
 		if res is None: #no limit values have been set for the user
-			_ = collection.insert_one({'_id':update.message.chat_id, 'limits':user_data['limits']}).inserted_id
-			text = ("Updating the limit values...")
-			client.close()
+			res = collection.insert_one({'_id':update.message.chat_id, 'limits':user_data['limits']}).acknowledged
+			#if acknowledged
+			if res: text = ("Successfully set the limit values." 
+						   +"\n"
+						   +"\n type  /home  to return to main menu or choose one of the options below") 
+			text = ("Failed to set the limit values."
+			        +"\n"
+					+"\n type  /home  to return to main menu or choose one of the options below") 
+			markup = reply_markups.setLimitsMarkup
 			user_data['limits'] = {} #clear limits
 		else: 
-			text = ("You have already set limit values. Update?")
-			# collection.find_one_and_update({"_id":1},
-			# 								{'$set':{ "name": "pI", "value": 3.141598}},
-			# 								return_document=pymongo.ReturnDocument.AFTER)
-			client.close()
+			text = ("You have already set limit values. Type  /update  to update the limits"
+					+"\nOr tap below to view the limits")
+			res = res['limits']
+			#pick the non-empty fields
+			limitstoUpdate = {key: value for key, value in user_data['limits'].items() if value != ""}
+			#update the document
+			for key in limitstoUpdate.keys(): res[key] = limitstoUpdate[key]
+			user_data['limits'] = res
+			markup = ReplyKeyboardMarkup([[KeyboardButton("View limits")]], resize_keyboard=True)
+		client.close()
 	except Exception as error:
 		text = str(error)
-		logger.info(error)
+		markup = reply_markups.setLimitsMarkup
+		logger.error(error)
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
-					reply_markup = reply_markups.expensesReportMarkup)
+					reply_markup = markup)
 
 	return CHOOSING
 
 # View values set for limits
+# TODO: Use env vars instead of config
 def viewLimits(bot, update, user_data):
-	cacert_path = '/home/peterm/Desktop/Temp/cacert.pem'
+	# env configs
+	params = config("./config.ini", "Environment")
+	cacert_path = None
+	if params["mode"]=="dev":
+		dirname = env.get("HOME", "")
+		filename = 'cacert.pem'
+		cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
 	try:
+		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 		client = pymongo.MongoClient(env.get("MONGO_HOST"),
 									ssl=True,
 									ssl_ca_certs=cacert_path)
@@ -463,6 +504,212 @@ def viewLimits(bot, update, user_data):
 	
 	return CHOOSING
 
+# Update the limit values
+# TODO: Complete this!
+# TODO: Use env vars instead of config
+def updateLimits(bot,update,user_data):
+	pass
+	return CHOOSING
+
+# Update limits without review
+# TODO: Use env vars instead of config
+def updateLimitsnoRVW(bot,update,user_data):
+	# env configs
+	params = config("./config.ini", "Environment")
+	cacert_path = None
+	if (params["mode"] == "dev"):
+		dirname = env.get("HOME", "")
+		filename = 'cacert.pem'
+		cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
+	try: 
+		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+		client = pymongo.MongoClient(env.get("MONGO_HOST"),
+									ssl=True,
+									ssl_ca_certs=cacert_path)
+		db = client.get_database(env.get("MONGO_DATABASE_NAME"))
+		collection = db.get_collection('sample')
+		res = collection.find_one_and_update({"_id":update.message.chat_id}, 
+											{'$set':{"limits":user_data['limits']}},
+			 								return_document=pymongo.ReturnDocument.AFTER,)
+		text = ("Success")
+		user_data['limits'] = {} #clear limits
+		if res is None: text = ("failed!")
+		markup = reply_markups.expensesReportMarkup
+		client.close()
+	except Exception as error:
+		text = str(error)
+		markup = reply_markups.setLimitsMarkup
+		logger.error(error)
+	bot.send_message(chat_id=update.message.chat_id,
+					text = text,
+					reply_markup = markup)
+
+	return CHOOSING
+
+# View expenses for the current month
+# TODO: Provide option to select month
+# TODO: Provide better status messages when fetching data from servers
+# TODO: deal with no limit values have been set for the user.
+def viewExpenses(bot,update,user_data):
+	month_map = {'01':'Jan','02':'Feb','03':'Mar','04':'April','05':'May','06':'June','07':'July','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'}
+	#get the local time
+	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
+	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:7] #only current the year and month
+	#try fetching expenses from pg
+	try:
+		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+		r = requests.get(url=env.get('URL_VIEW_EXPENSE')+date)
+		res_pg = r.json()
+		if res_pg['Data'] is not None and res_pg['Success'] is not True:     # some error 
+			text = ("Failed!"
+					+"\nComment: " +res_pg['Comment']
+					+"\nError: "+str(res_pg['Error'])+".")
+			markup = reply_markups.expensesReportMarkup
+		if res_pg['Data'] is None:
+			text = ("You have not entered any expenses for "+month_map[date[5:7]]+" - "+date[:4]
+					+"\nType  /select  to select which month to show"
+					+"\nOr type  /cancel  to abort.")
+			markup = ReplyKeyboardRemove()
+			bot.send_message(chat_id=update.message.chat_id,
+									text = text,
+									reply_markup = markup)
+
+			return TYPING_REPLY
+		else:       # no errors
+			# env configs
+			params = config("./config.ini", "Environment")
+			cacert_path = None
+			if (params["mode"] == "dev"):
+				dirname = env.get("HOME", "")
+				filename = 'cacert.pem'
+				cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
+			try: 
+				bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+				client = pymongo.MongoClient(env.get("MONGO_HOST"),
+											ssl=True,
+											ssl_ca_certs=cacert_path)
+				db = client.get_database(env.get("MONGO_DATABASE_NAME"))
+				collection = db.get_collection('sample')
+				res_mg = collection.find_one({"_id":update.message.chat_id})
+				if res_mg is None: #no limit values have been set for the user
+					pass
+				else:
+					#pick the non-empty fields
+					res_mg_ = {key: value for key, value in res_mg['limits'].items() if value != ""}
+					text = ("Expenses by Category for "+month_map[date[5:7]]+" - "+date[:4]
+							+"\n"
+							+"\n{}".format(convertExp_Lim(res_pg['Data'], res_mg_))
+							+"\n"
+							+"\nType  /home  to return to main menu"
+							+"\nOr  /select  to select which month to show")
+					markup = ReplyKeyboardRemove()
+					bot.send_message(chat_id=update.message.chat_id,
+									text = text,
+									reply_markup = markup)
+
+					return TYPING_REPLY
+			except Exception as error:
+				text = str(error)
+				markup = reply_markups.expensesReportMarkup
+				logger.error(error)
+	except Exception as error:
+		text = ("Something went wrong."
+				+"\n"
+				+"\nNo connection to the db server."
+				+"\n"
+				+"Type in the category. Or  /cancel  to choose other options."
+				+"\nOr  /home  to return to Main Menu")   
+		markup = reply_markups.expensesReportMarkup
+		logger.error(error)
+	bot.send_message(chat_id=update.message.chat_id,
+					text = text,
+					reply_markup = markup)
+
+	return CHOOSING
+
+#
+def selectMonth(bot, update, user_data):
+	text = ("Please type in full the month for which you'd like to view expenses for eg May, December")
+	markup = ReplyKeyboardRemove()
+	bot.send_message(chat_id=update.message.chat_id,
+					text = text,
+					reply_markup = markup)
+	
+	return TYPING_REPLY
+
+# Confirm the month
+# TODO: add provision for changing the year
+# TODO: deal with no limit values have been set for the user.
+def confirmMonth(bot, update, user_data):
+	month = (update.message.text).lower()
+	#get the local time
+	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
+	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:7] #only current the year and month
+	month_map = {'january':'01','february':'02','march':'03','april':'04','may':'05','june':'06','july':'07','august':'08','september':'09','october':'10','november':'11','december':'12'}
+	#try fetching expenses from pg
+	try:
+		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+		r = requests.get(url=env.get('URL_VIEW_EXPENSE')+date[:5]+month_map[month])
+		res_pg = r.json()
+		if res_pg['Data'] is not None and res_pg['Success'] is not True:     
+			text = ("Failed!"
+					+"\nComment: " +res_pg['Comment']
+					+"\nError: "+str(res_pg['Error'])+".")
+			markup = reply_markups.expensesReportMarkup
+		if res_pg['Data'] is None:
+			text = ("You have not entered any expenses for "+month+" - "+date[:4]
+					+"\nType  /select  to select which month to show")
+			markup = reply_markups.expensesReportMarkup
+		else:       # no errors
+			# env configs
+			params = config("./config.ini", "Environment")
+			cacert_path = None
+			if (params["mode"] == "dev"):
+				dirname = env.get("HOME", "")
+				filename = 'cacert.pem'
+				cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
+			try: 
+				bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+				client = pymongo.MongoClient(env.get("MONGO_HOST"),
+											ssl=True,
+											ssl_ca_certs=cacert_path)
+				db = client.get_database(env.get("MONGO_DATABASE_NAME"))
+				collection = db.get_collection('sample')
+				res_mg = collection.find_one({"_id":update.message.chat_id})
+				if res_mg is None: #no limit values have been set for the user.
+					pass
+				else:
+					#pick the non-empty fields
+					res_mg_ = {key: value for key, value in res_mg['limits'].items() if value != ""}
+					text = ("Expenses by Category for "+month+" - "+date[:4]
+							+"\n"
+							+"\n{}".format(convertExp_Lim(res_pg['Data'], res_mg_))
+							+"\n"
+							+"\nType  /home  to return to main menu"
+							+"\nOr type in full the month for which you'd like to view expenses")
+					markup = ReplyKeyboardRemove()
+			except Exception as error:
+				text = str(error)
+				markup = reply_markups.expensesReportMarkup
+				logger.error(error)
+	except Exception as error:
+		text = ("Something went wrong."
+				+"\n"
+				+"\nNo connection to the db server."
+				+"\n"
+				+"Type in the category. Or  /cancel  to choose other options."
+				+"\nOr  /home  to return to Main Menu")   
+		markup = reply_markups.expensesReportMarkup
+		logger.error(error)
+
+	markup = ReplyKeyboardRemove()
+	bot.send_message(chat_id=update.message.chat_id,
+					text = text,
+					reply_markup = markup)
+
+	return TYPING_REPLY
+
+#
 def error(bot, update, error):
 	"""Log Errors caused by Updates."""
 	logger.warning('Update "%s" caused error "%s"', update, error)

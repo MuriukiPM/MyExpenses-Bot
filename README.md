@@ -29,6 +29,9 @@
 ## Config variables required:
 
 			- TOKEN								Bot Token from @Botfather
-			- URL_EXPENSE					API Request endpoint [POST] to database
-			- URL_SORTDESC				GET Request endpoint		
-			- URL_CATEGORIES			GET Request endpoint
+			- URL_POST_EXPENSE					API Request endpoint [POST] to database
+			- URL_SORTDESC						GET Request endpoint		
+			- URL_CATEGORIES					GET Request endpoint
+			- URL_VIEW_EXPENSE					GET Request endpoint
+			- MONGO_HOST						URL of MONGO database host
+			- MONGO_DATABASE_NAME				Name of the Mongo db.collection to be used
