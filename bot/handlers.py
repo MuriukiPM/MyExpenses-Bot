@@ -587,15 +587,16 @@ def viewExpenses(bot,update,user_data):
 							+"\n"
 							+"\n{}".format(convertList(res_pg['Data']))
 							+"\nTotal expenses: {}".format(sum_exp)
-							+"\nTo view the expenses in comparison to limits, please select" 
-							+" 'Set Limits' from below to input limits"
+							+"\nTo view the expenses in comparison to limits, please type" 
+							+"  /edit  to input limits"
+							+"\nOr type in full the month for which you'd like to view expenses for eg May, December"
 							+"\nOr type  /home  to finish")
-					markup = ReplyKeyboardMarkup([[KeyboardButton("Set Limits")]], resize_keyboard=True)
+					markup = ReplyKeyboardRemove()
 					bot.send_message(chat_id=update.message.chat_id,
 									text = text,
 									reply_markup = markup)
 
-					return CHOOSING
+					return TYPING_REPLY
 				else:
 					#pick the non-empty fields
 					res_mg_ = {key: value for key, value in res_mg['limits'].items() if value != ""}
@@ -657,7 +658,6 @@ def selectMonth(bot, update, user_data):
 			text = ("You have not entered any expenses for "+month+" - "+date[:4]
 					+"\nPlease type in full the month for which you'd like to view expenses for eg May, December"
 					+"\nOr type  /cancel  to abort.")
-			markup = ReplyKeyboardRemove()
 		else:       # no errors
 			#get the sum
 			sum_exp = 0
@@ -676,15 +676,10 @@ def selectMonth(bot, update, user_data):
 							+"\n"
 							+"\n{}".format(convertList(res_pg['Data']))
 							+"\nTotal expenses: {}".format(sum_exp)
-							+"\nTo view the expenses in comparison to limits, please select" 
-							+" 'Set Limits' from below to input limits"
+							+"\nTo view the expenses in comparison to limits, please type"
+							+"  /edit  to input limits"
+							+"\nOr type in full the month for which you'd like to view expenses for eg May, December"
 							+"\nOr type  /home  to finish")
-					markup = ReplyKeyboardMarkup([[KeyboardButton("Set Limits")]], resize_keyboard=True)
-					bot.send_message(chat_id=update.message.chat_id,
-									text = text,
-									reply_markup = markup)
-
-					return CHOOSING
 				else:
 					#pick the non-empty fields
 					res_mg_ = {key: value for key, value in res_mg['limits'].items() if value != ""}
@@ -695,7 +690,6 @@ def selectMonth(bot, update, user_data):
 							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nType  /home  to return to main menu"
 							+"\nOr type in full the month for which you'd like to view expenses")
-					markup = ReplyKeyboardRemove()
 			except Exception as error:
 				text = ("ERROR: "+str(error))
 				markup = reply_markups.expensesReportMarkup
