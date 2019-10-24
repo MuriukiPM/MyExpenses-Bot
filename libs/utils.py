@@ -64,4 +64,9 @@ def config(filename, section='Environment'):
  
     return configs
   
-# Check if dev
+# Check if dev and return various vars needed
+def dev():
+    if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
+    else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
+    
+    return cacert_path
