@@ -131,5 +131,5 @@ dmypy.json
 # End of https://www.gitignore.io/api/python
 
 # Secrets
-bot/config.py
 config.ini
+bot/config.py

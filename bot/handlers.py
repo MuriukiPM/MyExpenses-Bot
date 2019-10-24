@@ -502,11 +502,13 @@ def viewLimits(bot, update, user_data):
 # Update the limit values with review
 # TODO: Complete this!
 def updateLimitsWRVW(bot,update,user_data):
+	"""Input and update limits in nosql db"""
 	pass
 	return CHOOSING
 
 # Update limits without review
 def updateLimitsnoRVW(bot,update,user_data):
+	"""Update the limits previously set immediately"""
 	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
 	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
 	#logger.info(cacert_path)
