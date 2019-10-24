@@ -26,6 +26,14 @@ def convertDict(user_data):
 
     return "\n".join(items).join(['\n', '\n'])
 
+def convertList(data):
+    facts = list()
+
+    for item in data:
+        facts.append('{} : {}'.format(item['Category'], item['Metric']))
+    
+    return ("\n".join(facts).join(['\n', '\n']))
+
 # Accept list of dicts object and dict object and return formatted strings
 def convertExp_Lim(exp_data, lim_data):
     """Given the values of expenses per category and 

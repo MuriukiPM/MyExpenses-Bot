@@ -7,7 +7,7 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup
 import pymongo
 
 from bot import reply_markups
-from libs.utils import logger, convertJson, convertExp_Lim, subtract_one_month, config, dev
+from libs.utils import logger, convertJson, convertExp_Lim, convertList, subtract_one_month, config, dev
 from bot.globals import *
 
 # TODO: space out commands to ease tapping on phone
@@ -456,7 +456,7 @@ def postLimits(bot, update, user_data):
 			markup = ReplyKeyboardMarkup([[KeyboardButton("View limits")]], resize_keyboard=True)
 		client.close()
 	except Exception as error:
-		text = str(error)
+		text = ("ERROR: "+str(error))
 		markup = reply_markups.setLimitsMarkup
 		logger.error(error)
 	bot.send_message(chat_id=update.message.chat_id,
@@ -490,7 +490,7 @@ def viewLimits(bot, update, user_data):
 			reply_markup = reply_markups.expensesReportMarkup
 		client.close()
 	except Exception as error:
-		text = str(error)
+		text = ("ERROR: "+str(error))
 		reply_markup = reply_markups.expensesReportMarkup
 		logger.info(error)
 	bot.send_message(chat_id=update.message.chat_id,
@@ -528,7 +528,7 @@ def updateLimitsnoRVW(bot,update,user_data):
 		markup = reply_markups.expensesReportMarkup
 		client.close()
 	except Exception as error:
-		text = str(error)
+		text = ("ERROR: "+str(error))
 		markup = reply_markups.setLimitsMarkup
 		logger.error(error)
 	bot.send_message(chat_id=update.message.chat_id,
@@ -585,7 +585,7 @@ def viewExpenses(bot,update,user_data):
 				if res_mg is None: #no limit values have been set for the user
 					text = ("Expenses by Category for "+month_map[date[5:7]]+" - "+date[:4]
 							+"\n"
-							+"\n{}".format(convertJson(res_pg['Data']))
+							+"\n{}".format(convertList(res_pg['Data']))
 							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nTo view the expenses in comparison to limits, please select" 
 							+" 'Set Limits' from below to input limits"
@@ -613,7 +613,7 @@ def viewExpenses(bot,update,user_data):
 
 					return TYPING_REPLY
 			except Exception as error:
-				text = str(error)
+				text = ("ERROR: "+str(error))
 				markup = reply_markups.expensesReportMarkup
 				logger.error(error)
 	except Exception as error:
@@ -672,9 +672,9 @@ def selectMonth(bot, update, user_data):
 				collection = db.get_collection(env.get("MONGO_COLLECTION_NAME"))
 				res_mg = collection.find_one({"_id":update.message.chat_id})
 				if res_mg is None: #no limit values have been set for the user.
-					text = ("Expenses by Category for "+month_map[date[5:7]]+" - "+date[:4]
+					text = ("Expenses by Category for "+month+" - "+date[:4]
 							+"\n"
-							+"\n{}".format(convertJson(res_pg['Data']))
+							+"\n{}".format(convertList(res_pg['Data']))
 							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nTo view the expenses in comparison to limits, please select" 
 							+" 'Set Limits' from below to input limits"
@@ -697,7 +697,7 @@ def selectMonth(bot, update, user_data):
 							+"\nOr type in full the month for which you'd like to view expenses")
 					markup = ReplyKeyboardRemove()
 			except Exception as error:
-				text = str(error)
+				text = ("ERROR: "+str(error))
 				markup = reply_markups.expensesReportMarkup
 				logger.error(error)
 	except Exception as error:
