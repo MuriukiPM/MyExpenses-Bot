@@ -28,6 +28,10 @@ def convertDict(user_data):
 
 # Accept list of dicts object and dict object and return formatted strings
 def convertExp_Lim(exp_data, lim_data):
+    """Given the values of expenses per category and 
+       the values of the limits, return a 
+       formatted string with the expenses and limits
+    """
     facts = list()
     for item in exp_data:
         if item['Category'] not in lim_data.keys():

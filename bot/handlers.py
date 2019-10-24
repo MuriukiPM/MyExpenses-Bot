@@ -32,10 +32,9 @@ def start(bot, update, user_data):
 # TODO: streamline this a bit more
 def verify(bot, update, user_data):
 	verificationNumber = update.message.text
-	# env configs
-	params = config("./config.ini", "Environment")
-	params_dev = config("./config.ini", "Dev")
-	if params["mode"]=="dev": verificationNumber = params_dev["chatid"]
+	env.get("ENV_MODE","")
+	if env.get("ENV_MODE","")=="dev": verificationNumber = env.get("DEV_CHATID","")
+	logger.info(verificationNumber)
 	if verificationNumber == str(update.message.from_user.id):
 		# Initialise some variables
 		user_data['input'] = {}
@@ -190,7 +189,7 @@ def category(bot, update, user_data):
 	return TYPING_REPLY
 
 # Proof column
-# TODO: Accept image, base64 encode, return string -- or not (string too long)
+# TODO: Accept image, base64 encode, return string -- <EDIT> (string too long)
 def proof(bot, update, user_data):
 	user_data['currentExpCat'] = "Proof"
 	text = ("Type in the proof. Or  /cancel  to choose other options."
@@ -260,11 +259,12 @@ def postExpense(bot, update, user_data):
 
 # Confirmation of entered value
 def verifyValue(bot, update, user_data):
+	"""Verify various inputs to proceed"""
 	data = update.message.text #grab the reply text
 
 	# if the timestamp was just set
 	if (user_data['currentExpCat'] == 'Timestamp'):
-		try:
+		try: #if datetime object can be obtained from input
 			datetime.datetime.strptime(data,"%Y-%m-%d %H:%M:%S")
 		except ValueError: #time passed given
 			s = update.message.text.split() #split on space
@@ -285,6 +285,7 @@ def verifyValue(bot, update, user_data):
 			+user_data['currentExpCat']+" value." 
 			+"\nOr  /cancel  to choose other options ")
 	markup = ReplyKeyboardRemove()
+	#If amount was just entered, provide summary of values
 	if (user_data['currentExpCat'] == 'Amount'):
 		text = ("Received '"+data+"' as your "+user_data['currentExpCat']+" value."
 			+"\nCurrent entries: "
@@ -301,6 +302,7 @@ def verifyValue(bot, update, user_data):
 
 # Final value to post
 def value(bot, update, user_data):
+	"""Provide user with keyboards to select other input categories"""
 	# Choose relevant reply markup
 	markup = user_data['markups'][user_data['currentExpCat']]		
 	text = ("Great! Choose next option to populate." 
@@ -416,15 +418,10 @@ def reviewLimits(bot, update, user_data):
 
 # Post the limit values to a db somewhere
 # TODO: Deal with failed post better
-# TODO: Use env vars instead of config
 def postLimits(bot, update, user_data):
-	# env configs
-	params = config("./config.ini", "Environment")
-	cacert_path = None
-	if (params["mode"] == "dev"):
-		dirname = env.get("HOME", "")
-		filename = 'cacert.pem'
-		cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
+	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
+	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
+	#logger.info(cacert_path)
 	try: 
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 		client = pymongo.MongoClient(env.get("MONGO_HOST"),
@@ -466,15 +463,10 @@ def postLimits(bot, update, user_data):
 	return CHOOSING
 
 # View values set for limits
-# TODO: Use env vars instead of config
 def viewLimits(bot, update, user_data):
-	# env configs
-	params = config("./config.ini", "Environment")
-	cacert_path = None
-	if params["mode"]=="dev":
-		dirname = env.get("HOME", "")
-		filename = 'cacert.pem'
-		cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
+	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
+	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
+	#logger.info(cacert_path)
 	try:
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 		client = pymongo.MongoClient(env.get("MONGO_HOST"),
@@ -504,23 +496,18 @@ def viewLimits(bot, update, user_data):
 	
 	return CHOOSING
 
-# Update the limit values
+# Update the limit values with review
 # TODO: Complete this!
 # TODO: Use env vars instead of config
-def updateLimits(bot,update,user_data):
+def updateLimitsWRVW(bot,update,user_data):
 	pass
 	return CHOOSING
 
 # Update limits without review
-# TODO: Use env vars instead of config
 def updateLimitsnoRVW(bot,update,user_data):
-	# env configs
-	params = config("./config.ini", "Environment")
-	cacert_path = None
-	if (params["mode"] == "dev"):
-		dirname = env.get("HOME", "")
-		filename = 'cacert.pem'
-		cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
+	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
+	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
+	#logger.info(cacert_path)
 	try: 
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 		client = pymongo.MongoClient(env.get("MONGO_HOST"),
@@ -547,14 +534,17 @@ def updateLimitsnoRVW(bot,update,user_data):
 	return CHOOSING
 
 # View expenses for the current month
-# TODO: Provide option to select month
 # TODO: Provide better status messages when fetching data from servers
-# TODO: deal with no limit values have been set for the user.
+# FIXME: deal with incorrect input: if not month: use regex on dispatch handler
 def viewExpenses(bot,update,user_data):
+	"""Flow to view current expenses for this month"""
 	month_map = {'01':'Jan','02':'Feb','03':'Mar','04':'April','05':'May','06':'June','07':'July','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'}
 	#get the local time
 	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
 	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:7] #only current the year and month
+	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
+	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
+	#logger.info(cacert_path)
 	#try fetching expenses from pg
 	try:
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
@@ -576,13 +566,10 @@ def viewExpenses(bot,update,user_data):
 
 			return TYPING_REPLY
 		else:       # no errors
-			# env configs
-			params = config("./config.ini", "Environment")
-			cacert_path = None
-			if (params["mode"] == "dev"):
-				dirname = env.get("HOME", "")
-				filename = 'cacert.pem'
-				cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
+			#get the sum
+			sum_exp = 0
+			for exp in res_pg['Data']: sum_exp += exp['Metric']
+			#try fetching expenses limits from mongo
 			try: 
 				bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 				client = pymongo.MongoClient(env.get("MONGO_HOST"),
@@ -592,14 +579,27 @@ def viewExpenses(bot,update,user_data):
 				collection = db.get_collection('sample')
 				res_mg = collection.find_one({"_id":update.message.chat_id})
 				if res_mg is None: #no limit values have been set for the user
-					pass
+					text = ("Expenses by Category for "+month_map[date[5:7]]+" - "+date[:4]
+							+"\n"
+							+"\n{}".format(convertJson(res_pg['Data']))
+							+"\nTotal expenses: {}".format(sum_exp)
+							+"\nTo view the expenses in comparison to limits, please select" 
+							+" 'Set Limits' from below to input limits"
+							+"\nOr type  /home  to finish")
+					markup = ReplyKeyboardMarkup([[KeyboardButton("Set Limits")]], resize_keyboard=True)
+					bot.send_message(chat_id=update.message.chat_id,
+									text = text,
+									reply_markup = markup)
+
+					return CHOOSING
 				else:
 					#pick the non-empty fields
 					res_mg_ = {key: value for key, value in res_mg['limits'].items() if value != ""}
+					#create the reply
 					text = ("Expenses by Category for "+month_map[date[5:7]]+" - "+date[:4]
 							+"\n"
 							+"\n{}".format(convertExp_Lim(res_pg['Data'], res_mg_))
-							+"\n"
+							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nType  /home  to return to main menu"
 							+"\nOr  /select  to select which month to show")
 					markup = ReplyKeyboardRemove()
@@ -627,8 +627,9 @@ def viewExpenses(bot,update,user_data):
 
 	return CHOOSING
 
-#
+# Flow to select the month
 def selectMonth(bot, update, user_data):
+	"""Flow to select the month"""
 	text = ("Please type in full the month for which you'd like to view expenses for eg May, December")
 	markup = ReplyKeyboardRemove()
 	bot.send_message(chat_id=update.message.chat_id,
@@ -637,15 +638,19 @@ def selectMonth(bot, update, user_data):
 	
 	return TYPING_REPLY
 
-# Confirm the month
+# Confirm the month and display
 # TODO: add provision for changing the year
-# TODO: deal with no limit values have been set for the user.
+# FIXME: deal with incorrect input: if not month: use regex on dispatch handler
 def confirmMonth(bot, update, user_data):
+	"""Flow to fetch various data and display"""
 	month = (update.message.text).lower()
 	#get the local time
 	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
 	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:7] #only current the year and month
 	month_map = {'january':'01','february':'02','march':'03','april':'04','may':'05','june':'06','july':'07','august':'08','september':'09','october':'10','november':'11','december':'12'}
+	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
+	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
+	#logger.info(cacert_path)
 	#try fetching expenses from pg
 	try:
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
@@ -661,13 +666,10 @@ def confirmMonth(bot, update, user_data):
 					+"\nType  /select  to select which month to show")
 			markup = reply_markups.expensesReportMarkup
 		else:       # no errors
-			# env configs
-			params = config("./config.ini", "Environment")
-			cacert_path = None
-			if (params["mode"] == "dev"):
-				dirname = env.get("HOME", "")
-				filename = 'cacert.pem'
-				cacert_path = dirname + "/" + filename #'/home/peterm/Desktop/Temp/cacert.pem'
+			#get the sum
+			sum_exp = 0
+			for exp in res_pg['Data']: sum_exp += exp['Metric']
+			#try fetching data from mongo
 			try: 
 				bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 				client = pymongo.MongoClient(env.get("MONGO_HOST"),
@@ -677,14 +679,27 @@ def confirmMonth(bot, update, user_data):
 				collection = db.get_collection('sample')
 				res_mg = collection.find_one({"_id":update.message.chat_id})
 				if res_mg is None: #no limit values have been set for the user.
-					pass
+					text = ("Expenses by Category for "+month_map[date[5:7]]+" - "+date[:4]
+							+"\n"
+							+"\n{}".format(convertJson(res_pg['Data']))
+							+"\nTotal expenses: {}".format(sum_exp)
+							+"\nTo view the expenses in comparison to limits, please select" 
+							+" 'Set Limits' from below to input limits"
+							+"\nOr type  /home  to finish")
+					markup = ReplyKeyboardMarkup([[KeyboardButton("Set Limits")]], resize_keyboard=True)
+					bot.send_message(chat_id=update.message.chat_id,
+									text = text,
+									reply_markup = markup)
+
+					return CHOOSING
 				else:
 					#pick the non-empty fields
 					res_mg_ = {key: value for key, value in res_mg['limits'].items() if value != ""}
+					#create the reply
 					text = ("Expenses by Category for "+month+" - "+date[:4]
 							+"\n"
 							+"\n{}".format(convertExp_Lim(res_pg['Data'], res_mg_))
-							+"\n"
+							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nType  /home  to return to main menu"
 							+"\nOr type in full the month for which you'd like to view expenses")
 					markup = ReplyKeyboardRemove()

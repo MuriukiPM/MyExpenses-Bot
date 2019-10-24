@@ -78,7 +78,7 @@ def main():
                                     pass_user_data=True),
                         RegexHandler('Set Limits', handlers.setLimits,
                                     pass_user_data=True),
-                        RegexHandler('Update Limits', handlers.updateLimits,
+                        RegexHandler('Update Limits', handlers.updateLimitsWRVW,
                                     pass_user_data=True),
                         RegexHandler('View Limits', handlers.viewLimits,
                                     pass_user_data=True),
