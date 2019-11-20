@@ -3,8 +3,13 @@ import logging
 import datetime
 from configparser import ConfigParser
 
+import pandas as pd
+import numpy as np
+import psycopg2
+
 # Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+# https://docs.python.org/3/library/logging.html#logrecord-attributes
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(funcName)s - %(filename)s:%(lineno)d',
                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
@@ -21,7 +26,7 @@ def convertDict(user_data):
     items = list()
 
     for key, value in user_data.items():
-        if value and (key is not 'retrieved'):
+        if value and (key != 'retrieved'):
             items.append('{} : {}'.format(key, value))
 
     return "\n".join(items).join(['\n', '\n'])
@@ -78,3 +83,74 @@ def dev():
     else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
     
     return cacert_path
+
+def connect():
+    """ Connect to the PostgreSQL database server and quick test"""
+    
+    conn = None
+    err = None
+    try: 
+        # connect to the PostgreSQL server
+        logger.info('Connecting to the PostgreSQL database...')
+        params = {"host":env.get("DB_HOST"),"database":env.get("DB_NAME"),"user":env.get("DB_USER"),
+                "password":env.get("DB_PASSWORD"),"port":env.get("DB_PORT")}
+        logger.info("connstr: "+str(params))
+        conn = psycopg2.connect(**params)
+      
+        # create a cursor
+        cur = conn.cursor()
+        
+        # execute a statement
+        cur.execute('SELECT version()')
+ 
+        # display the PostgreSQL database server version
+        db_version = cur.fetchone()
+        logger.info("PostgreSQL database version: "+str(db_version))
+       
+        # close the communication with the PostgreSQL
+        cur.close()
+    except (Exception, psycopg2.DatabaseError) as error:
+        err = error
+       
+    return conn, err
+
+def getsqlrows(conn):
+    """getsqlrows queries the database for rows"""
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * from expenses")
+        rows = cur.fetchall()
+        logger.info("Num of rows: "+str(len(rows)))
+        cur.close()
+        conn.close()
+
+        return rows, None
+    except (Exception, psycopg2.Error) as error:
+        conn.close()
+
+        return None, error
+
+def getdatatable(sqlrows):
+    """getdatatable creates a table with expense rows from rows returned from sql query"""
+    month_map = {1:'Jan',2:'Feb',3:'Mar',4:'April',5:'May',6:'June',7:'July',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
+    day_map = {0:'Mon',1:'Tue',2:'Wed',3:'Thu',4:'Fri',5:'Sat',6:'Sun'}
+    df = pd.DataFrame(data=sqlrows,columns=['rowid','timestamp','description','proof','amount','category'])
+    df_raw = df.copy()
+    df['timestamp']=pd.to_datetime(df['timestamp'])
+    df['hour']=df['timestamp'].apply(lambda time: time.hour)
+    df['month']=df['timestamp'].apply(lambda time: time.month).map(month_map)
+    df['year']=df['timestamp'].apply(lambda time: time.year)
+    df['day_of_week']=df['timestamp'].apply(lambda time: time.dayofweek).map(day_map)
+    
+    return df_raw, df
+
+def gettotals(sqlrows):
+    """gettotals creates a multi-index table of sum of expenses sorted by category and month"""
+    _, df = getdatatable(sqlrows=sqlrows)
+    months = df.month.unique()
+    MonthnCat = df.groupby(['category','year','month'])['amount'].sum().unstack(1)
+    MonthnCat = MonthnCat.reindex(pd.MultiIndex.from_product([MonthnCat.index.levels[0], months], names=['category', 'month']))
+    MonthnCat.fillna(value=0.0, inplace=True)
+    MonthnCat = MonthnCat.astype('int')
+
+    return MonthnCat
