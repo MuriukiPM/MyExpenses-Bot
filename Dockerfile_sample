@@ -1,0 +1,43 @@
+# by @PMuriuki 
+# - ver 0.1 - 19th Nov 2019 - bot dockerization
+
+# base image
+FROM python:3
+
+# set working directory
+WORKDIR /app
+
+# install and cache app dependencies
+RUN apt-get update && apt-get install -y postgresql-11
+RUN apt-get install -y libpq-dev
+RUN python3 -m pip install psycopg2
+
+RUN python3 -m pip install dnspython
+RUN python3 -m pip install pymongo
+
+RUN python3 -m pip install python-telegram-bot
+
+RUN python3 -m pip install pandas
+RUN python3 -m pip install numpy
+
+COPY . /app
+
+# set env vars 
+ENV TOKEN "<Bot Token from @Botfather>"
+ENV URL_POST_EXPENSE "<API Request enpoint [POST] to database>"
+ENV URL_SORTDESC "<GET Request endpoint>"
+ENV URL_CATEGORIES "<GET Request endpoint>"
+ENV URL_VIEW_EXPENSE "<GET Request endpoint>"
+ENV MONGO_HOST "<URL of MONGO database host>"
+ENV MONGO_DATABASE_NAME "<Name of the database to be used>"
+ENV MONGO_COLLECTION_NAME "<Name of the collection to be used>"
+
+ENV DB_HOST "<Host addr/name of db>"
+ENV DB_NAME "Database name"
+ENV DB_USER "Database user name"
+ENV DB_PASSWORD "Database user password"
+ENV DB_PORT "5432/Database host port"
+
+RUN chmod a+x myexpensesbot.py
+
+CMD ["./myexpensesbot.py"]

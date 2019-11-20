@@ -13,18 +13,24 @@
 * python 3.6+
 * python-telegram-bot 11+
 
+## Docker
+
+$ docker image build -t myexpensesbot:V0.1 .
+
+$ docker container run --rm myexpensesbot:V0.1
+
 ## Code layout
 
 			.
-			├── bot												- Bot sources
+			├── bot									- Bot sources
 			│   ├── globals.py						- constant vars
 			│   ├── handlers.py						- Bot handlers go here
-			│   ├── reply_markups.py			- Keyboards and markups definitions
-			│   └── utils.py							- Other utility functions
+			│   ├── reply_markups.py				- Keyboards and markups definitions
+			│   └── utils.py						- Other utility functions
 			├── botscript.sh
 			├── myexpensesbot.py					- Main Program
 			├── README.md
-			└── .env_sample								- Environment variables										
+			└── .env_sample							- Environment variables										
 
 ## Config variables required:
 
