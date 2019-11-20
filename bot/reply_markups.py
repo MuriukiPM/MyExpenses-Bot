@@ -32,7 +32,8 @@ newExpenseNoCat = [
 expensesReport = [[KeyboardButton("Set Limits")],
                 [KeyboardButton("View Limits")],
                 [KeyboardButton("Update Limits")],
-                [KeyboardButton("View Expenses")],
+                [KeyboardButton("View Expenses By Month")],
+                [KeyboardButton("View Expenses By Category")],
                 [KeyboardButton("Abort")]]
 
 setLimits = [[KeyboardButton("View Limits")],
