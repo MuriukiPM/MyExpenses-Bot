@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
+##!/usr/bin/python3
 """
 @ author: PMuriuki
 """
@@ -18,18 +19,16 @@ from bot.globals import CHOOSING, TYPING_REPLY
 # TODO: Add output message showing % of budgetary limit used per category
 def main():
     # Set up the Updater
-    updater = Updater(env.get("TOKEN"))
+    updater = Updater(env.get("TOKEN"),use_context=True)
     dispatcher = updater.dispatcher
     
     # Add dispatchers
     # Start and verify
     # TODO: add a "sorry, that's not a valid choice" fallback
     dispatcher.add_handler(ConversationHandler(
-        entry_points=[CommandHandler('start', handlers.start,
-                                    pass_user_data=True)],
+        entry_points=[CommandHandler('start', handlers.start)],
         states={
-            TYPING_REPLY: [MessageHandler(Filters.text, handlers.verify,
-                                          pass_user_data=True)],                       
+            TYPING_REPLY: [MessageHandler(Filters.text, handlers.verify)],                       
                 },
         fallbacks=[]
         ))
@@ -37,22 +36,22 @@ def main():
     # Enter new expense
     # TODO: add a "sorry, that's not a valid choice" fallback
     dispatcher.add_handler(ConversationHandler(
-        entry_points=[RegexHandler('New Expense', handlers.newExpense,
+        entry_points=[MessageHandler(Filters.regex('New Expense'), handlers.newExpense,
                                     pass_user_data=True)],
         states = {
-            CHOOSING : [RegexHandler('Timestamp', handlers.timestamp,
+            CHOOSING : [MessageHandler(Filters.regex('Timestamp'), handlers.timestamp,
                                     pass_user_data=True),
-                        RegexHandler('Description', handlers.description,
+                        MessageHandler(Filters.regex('Description'), handlers.description,
                                     pass_user_data=True),
-                        RegexHandler('Category', handlers.category,
+                        MessageHandler(Filters.regex('Category'), handlers.category,
                                     pass_user_data=True),
-                        RegexHandler('Proof', handlers.proof,
+                        MessageHandler(Filters.regex('Proof'), handlers.proof,
                                     pass_user_data=True),
-                        RegexHandler('Amount', handlers.amount,
+                        MessageHandler(Filters.regex('Amount'), handlers.amount,
                                     pass_user_data=True),
-                        RegexHandler('Submit', handlers.postExpense,
+                        MessageHandler(Filters.regex('Submit'), handlers.postExpense,
                                     pass_user_data=True),
-                        RegexHandler('Abort', handlers.home,
+                        MessageHandler(Filters.regex('Abort'), handlers.home,
                                     pass_user_data=True)],
             TYPING_REPLY: [ MessageHandler(Filters.text, handlers.verifyValue,
                                           pass_user_data=True),
@@ -70,19 +69,22 @@ def main():
     
     # Set limits for categories of expenses
     # TODO: add a "sorry, that's not a valid choice" fallback
+    # TODO: seprate Limitis, expenses. limits->view,update,set | expenses->by month, by category
     dispatcher.add_handler(ConversationHandler(
-        entry_points=[RegexHandler('Expenses Report', handlers.expensesReport,
+        entry_points=[MessageHandler(Filters.regex('Expenses Report'), handlers.expensesReport,
                                     pass_user_data=True)],
         states = {
-            CHOOSING : [RegexHandler('Abort', handlers.home,
+            CHOOSING : [MessageHandler(Filters.regex('Abort'), handlers.home,
                                     pass_user_data=True),
-                        RegexHandler('Set Limits', handlers.setLimits,
+                        MessageHandler(Filters.regex('Set Limits'), handlers.setLimits,
                                     pass_user_data=True),
-                        RegexHandler('Update Limits', handlers.updateLimitsWRVW,
+                        MessageHandler(Filters.regex('Update Limits'), handlers.updateLimitsWRVW,
                                     pass_user_data=True),
-                        RegexHandler('View Limits', handlers.viewLimits,
+                        MessageHandler(Filters.regex('View Limits'), handlers.viewLimits,
                                     pass_user_data=True),
-                        RegexHandler('View Expenses', handlers.viewExpenses,
+                        MessageHandler(Filters.regex('View Expenses By Month'), handlers.totalByMonth,
+                                    pass_user_data=True),
+                        MessageHandler(Filters.regex('View Expenses By Category'), handlers.totalByCat,
                                     pass_user_data=True),
                         CommandHandler('update', handlers.updateLimitsnoRVW, 
                                     pass_user_data=True),
