@@ -1,26 +1,26 @@
 from os import environ as env
 
 import requests, json, datetime
-from telegram import  ReplyKeyboardRemove
-from telegram.ext import ConversationHandler
+from telegram import  ReplyKeyboardRemove, Update
+from telegram.ext import ConversationHandler, CallbackContext
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 import pymongo
 
 from bot import reply_markups
-from libs.utils import logger, convertJson, convertExp_Lim, convertList, subtract_one_month, config, dev
+from libs import utils
 from bot.globals import *
 
 # TODO: space out commands to ease tapping on phone
 # TODO: handler for fallbacks!
 # Flow: Wake the bot
-def start(bot, update, user_data):
+def start(update: Update, context: CallbackContext):
 	chat_ID = str(update.message.from_user.id)
 	first_name = update.message.chat.first_name
-	#logger.info('Chat ID : %s', chat_ID)
+	#utils.logger.info('Chat ID : %s', chat_ID)
 	text = ("Welcome "+first_name+", I am Icarium"
 			+"\n"
 			+"\nPlease type your confirmation code for verification")
-	bot.send_message(chat_id=chat_ID,
+	context.bot.send_message(chat_id=chat_ID,
 					text=text,
 					reply_markup = ReplyKeyboardRemove())
 	
@@ -29,24 +29,25 @@ def start(bot, update, user_data):
 # verify identity and initialise various stuff
 # TODO: limit number of retries?
 # TODO: streamline this a bit more
-def verify(bot, update, user_data):
+def verify(update: Update, context: CallbackContext):
 	mode = env.get("ENV_MODE","")
 	if mode=="dev": verificationNumber = env.get("DEV_CHATID","")
 	else: verificationNumber = update.message.text
-	#logger.info(verificationNumber)
+	#utils.logger.info(verificationNumber)
 	if verificationNumber == str(update.message.from_user.id):
 		# Initialise some variables
-		user_data['input'] = {}
-		user_data['input']['Timestamp'] = []
-		user_data['input']['Description'] = []
-		user_data['input']['Proof'] = []
-		user_data['input']['Category'] = []
-		user_data['input']['Amount'] = []
-		user_data['limits'] = {}
-		user_data['currentExpCat'] = [] #the current expenses category
-		user_data['currentLimitCat'] = [] #the current limit category
+		context.user_data['input'] = {}
+		context.user_data['input']['Timestamp'] = []
+		context.user_data['input']['Description'] = []
+		context.user_data['input']['Proof'] = []
+		context.user_data['input']['Category'] = []
+		context.user_data['input']['Amount'] = []
+		context.user_data['limits'] = {}
+		context.user_data['allCats'] = []
+		context.user_data['currentExpCat'] = [] #the current expenses category
+		context.user_data['currentLimitCat'] = [] #the current limit category
 		#TS : NOTSMKP, DESCR : NODESCRMKP ,PRF : NOPRFMKP, CAT : NOCATMKP, AMT : NOAMTMKP 
-		user_data['markups'] = dict(zip([key for key, values in user_data['input'].items()],
+		context.user_data['markups'] = dict(zip([key for key, values in context.user_data['input'].items()],
 										reply_markups.expenseFlowMarkups))
 		# Do other background stuff
 
@@ -58,7 +59,7 @@ def verify(bot, update, user_data):
 		text = ("Wrong code!"
 				+"\n"
 				+"\nPlease type your confirmation code for verification")
-		bot.send_message(chat_id=str(update.message.from_user.id),
+		context.bot.send_message(chat_id=str(update.message.from_user.id),
 						text=text,
 						reply_markup = ReplyKeyboardRemove())
 		return TYPING_REPLY
@@ -116,7 +117,7 @@ def description(bot, update, user_data):
 	#get the local time
 	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
 	# get the date from 3 months back from now
-	for _ in range(3):  dt0 = subtract_one_month(dt0)
+	for _ in range(3):  dt0 = utils.subtract_one_month(dt0)
 	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:10] #only the date, not time
 	top_descr = []
 	# send a get request to obtain top ten results in a json
@@ -143,7 +144,7 @@ def description(bot, update, user_data):
 				+"\n"
 				+"Type in the description. Or  /cancel  to return to choose other options."
 				+"\nOr  /home  to return to Main Menu")   
-		logger.info(e)
+		utils.logger.info(e)
 		reply_markup = ReplyKeyboardRemove()
 	user_data['currentExpCat'] = "Description"
 	bot.send_message(chat_id=update.message.chat_id,
@@ -152,6 +153,7 @@ def description(bot, update, user_data):
 	return TYPING_REPLY
 
 # Category column
+# TODO: Consider using userdata saved categories
 def category(bot, update, user_data):
 	categories = []
 	# get the categories
@@ -178,12 +180,13 @@ def category(bot, update, user_data):
 				+"\n"
 				+"Type in the category. Or  /cancel  to choose other options."
 				+"\nOr  /home  to return to Main Menu")   
-		logger.info(e)
+		utils.logger.info(e)
 		reply_markup = ReplyKeyboardRemove()
 	user_data['currentExpCat'] = "Category" #update the check for most recently updated field
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = reply_markup)
+	
 	return TYPING_REPLY
 
 # Proof column
@@ -207,53 +210,6 @@ def amount(bot, update, user_data):
 					text = text,
 					reply_markup = ReplyKeyboardRemove())
 	return TYPING_REPLY
-
-# Post values to provided endpoint to update the db
-# TODO: On successful submit, for all limits selected, display value and
-# if no threshold set, ask if user wants to set the limits
-def postExpense(bot, update, user_data):
-	# Check for empty fields. Timestamp, Amount, Category has to be filled always
-	if user_data['input']['Amount'] and user_data['input']['Timestamp'] and user_data['input']['Category']:
-		# Initiate the POST. If successfull, you will get a primary key value
-		# and a Success bool as True
-		try:
-			bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
-			r = requests.post(env.get("URL_POST_EXPENSE"),
-							json={	"Timestamp":user_data['input']['Timestamp'],
-									"Description":user_data['input']['Description'],
-									"Proof":user_data['input']['Proof'],
-									"Amount":user_data['input']['Amount'],
-									"Category":user_data['input']['Category']
-									}
-								)
-			response = r.json() 
-			#logger.info(response)
-			if response['Success'] is not True:     # some error 
-				text = ("Failed!"
-						+"\nComment: " +response['Comment']
-						+"\nError: "+response['Error']['Message']+".")
-			else:       # no errors
-				# empty the fields
-				user_data['input']['Timestamp'] = []
-				user_data['input']['Description'] = []
-				user_data['input']['Proof'] = []
-				user_data['input']['Category'] = []
-				user_data['input']['Amount'] = []
-				text = ("Post Successful! Post id is: "+response['Comment']
-						+"\nPlease select an option from below.")
-		except Exception as e:
-			text = ("Something went wrong."
-					+"\n"
-					+"\nNo connection to the server.")   
-			logger.info("Post failed with error: "+str(e))
-	else:	# fields empty or amount empty
-		text = ("Please complete filling in the fields.")
-	
-	bot.send_message(chat_id=update.message.chat_id,
-                    text = text,
-                    reply_markup = reply_markups.newExpenseMarkup)
-	
-	return CHOOSING
 
 # Confirmation of entered value
 def verifyValue(bot, update, user_data):
@@ -287,7 +243,7 @@ def verifyValue(bot, update, user_data):
 	if (user_data['currentExpCat'] == 'Amount'):
 		text = ("Received '"+data+"' as your "+user_data['currentExpCat']+" value."
 			+"\nCurrent entries: "
-			+"\n{}".format(convertJson(user_data['input']))
+			+"\n{}".format(utils.convertJson(user_data['input']))
 			+"\n"
 			+"\nType  /submit  to post or type in a different value to change the "
 			+user_data['currentExpCat']+" value." 
@@ -310,6 +266,53 @@ def value(bot, update, user_data):
 					text = text,
 					reply_markup = markup) 
 
+	return CHOOSING
+
+# Post values to provided endpoint to update the db
+# TODO: On successful submit, for all limits selected, display value and
+# if no threshold set, ask if user wants to set the limits
+def postExpense(bot, update, user_data):
+	# Check for empty fields. Timestamp, Amount, Category has to be filled always
+	if user_data['input']['Amount'] and user_data['input']['Timestamp'] and user_data['input']['Category']:
+		# Initiate the POST. If successfull, you will get a primary key value
+		# and a Success bool as True
+		try:
+			bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+			r = requests.post(env.get("URL_POST_EXPENSE"),
+							json={	"Timestamp":user_data['input']['Timestamp'],
+									"Description":user_data['input']['Description'],
+									"Proof":user_data['input']['Proof'],
+									"Amount":user_data['input']['Amount'],
+									"Category":user_data['input']['Category']
+									}
+								)
+			response = r.json() 
+			#utils.logger.info(response)
+			if response['Success'] is not True:     # some error 
+				text = ("Failed!"
+						+"\nComment: " +response['Comment']
+						+"\nError: "+response['Error']['Message']+".")
+			else:       # no errors
+				# empty the fields
+				user_data['input']['Timestamp'] = []
+				user_data['input']['Description'] = []
+				user_data['input']['Proof'] = []
+				user_data['input']['Category'] = []
+				user_data['input']['Amount'] = []
+				text = ("Post Successful! Post id is: "+response['Comment']
+						+"\nPlease select an option from below.")
+		except Exception as e:
+			text = ("Something went wrong."
+					+"\n"
+					+"\nNo connection to the server.")   
+			utils.logger.info("Post failed with error: "+str(e))
+	else:	# fields empty or amount empty
+		text = ("Please complete filling in the fields.")
+	
+	bot.send_message(chat_id=update.message.chat_id,
+                    text = text,
+                    reply_markup = reply_markups.newExpenseMarkup)
+	
 	return CHOOSING
 
 # Flow for expense reports begins here
@@ -352,7 +355,7 @@ def setLimits(bot,update, user_data):
 					+"\n"
 					+"Or  /cancel to choose other options."
 					+"\nOr  /home  to return to Main Menu")   
-			logger.info(e)
+			utils.logger.info(e)
 			reply_markup = ReplyKeyboardRemove()
 	else:
 		categories = [[KeyboardButton(key)] for key in user_data['limits'].keys()]
@@ -407,7 +410,7 @@ def reviewLimits(bot, update, user_data):
 	"""Check all input limits before writing to nosql db"""
 	text = ("Limits to post are as follows"
 			+"\n"
-			+"\n{}".format(convertJson(user_data['limits']))
+			+"\n{}".format(utils.convertJson(user_data['limits']))
 			+"\n"
 			+"\nType /submit to post the limits. Or /edit to edit values"
 			+"\nType /home to abort and return to main menu")
@@ -424,7 +427,7 @@ def postLimits(bot, update, user_data):
 	"""Insert the input limits to nosql db or choose to update if not first time"""
 	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
 	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
-	#logger.info(cacert_path)
+	#utils.logger.info(cacert_path)
 	try: 
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 		client = pymongo.MongoClient(env.get("MONGO_HOST"),
@@ -458,7 +461,7 @@ def postLimits(bot, update, user_data):
 	except Exception as error:
 		text = ("ERROR: "+str(error))
 		markup = reply_markups.setLimitsMarkup
-		logger.error(error)
+		utils.logger.error(error)
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = markup)
@@ -469,7 +472,7 @@ def postLimits(bot, update, user_data):
 def viewLimits(bot, update, user_data):
 	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
 	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
-	#logger.info(cacert_path)
+	#utils.logger.info(cacert_path)
 	try:
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 		client = pymongo.MongoClient(env.get("MONGO_HOST"),
@@ -484,7 +487,7 @@ def viewLimits(bot, update, user_data):
 			#do something else
 		else:
 			text = ("Your values for the limits are :"
-					+"\n{}".format(convertJson(res['limits']))
+					+"\n{}".format(utils.convertJson(res['limits']))
 					+"\n"
 					+"\nSelect an option from below or type  /home  to return to Main Menu")
 			reply_markup = reply_markups.expensesReportMarkup
@@ -492,7 +495,7 @@ def viewLimits(bot, update, user_data):
 	except Exception as error:
 		text = ("ERROR: "+str(error))
 		reply_markup = reply_markups.expensesReportMarkup
-		logger.info(error)
+		utils.logger.info(error)
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = reply_markup)
@@ -530,18 +533,26 @@ def updateLimitsnoRVW(bot,update,user_data):
 	except Exception as error:
 		text = ("ERROR: "+str(error))
 		markup = reply_markups.setLimitsMarkup
-		logger.error(error)
+		utils.logger.error(error)
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = markup)
 
 	return CHOOSING
 
-# View expenses for the current month
+# View total expenses for the current month
 # TODO: Provide better status messages when fetching data from servers
 # FIXME: deal with incorrect input: if not month: use regex on dispatch handler
-def viewExpenses(bot,update,user_data):
+def totalByMonth(bot,update,user_data):
 	"""Flow to view current expenses for this month"""
+	conn, error = utils.connect()
+	if error is None:
+		rows, error = utils.getsqlrows(conn=conn)
+		if error is None:
+			MonthnCat = utils.gettotals(sqlrows=rows)
+			utils.logger.info((MonthnCat.loc['Housing', 2019].values))
+		else: utils.logger.info(error)
+	else: utils.logger.info(error)
 	month_map = {'01':'Jan','02':'Feb','03':'Mar','04':'April','05':'May','06':'June','07':'July','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'}
 	#get the local time
 	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
@@ -585,7 +596,7 @@ def viewExpenses(bot,update,user_data):
 				if res_mg is None: #no limit values have been set for the user
 					text = ("Expenses by Category for "+month_map[date[5:7]]+" - "+date[:4]
 							+"\n"
-							+"\n{}".format(convertList(res_pg['Data']))
+							+"\n{}".format(utils.convertList(res_pg['Data']))
 							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nTo view the expenses in comparison to limits, please type" 
 							+"  /edit  to input limits"
@@ -603,7 +614,7 @@ def viewExpenses(bot,update,user_data):
 					#create the reply
 					text = ("Expenses by Category for "+month_map[date[5:7]]+" - "+date[:4]
 							+"\n"
-							+"\n{}".format(convertExp_Lim(res_pg['Data'], res_mg_))
+							+"\n{}".format(utils.convertExp_Lim(res_pg['Data'], res_mg_))
 							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nType  /home  to return to main menu"
 							+"\nOr type in full the month for which you'd like to view expenses for eg May, December")
@@ -616,7 +627,7 @@ def viewExpenses(bot,update,user_data):
 			except Exception as error:
 				text = ("ERROR: "+str(error))
 				markup = reply_markups.expensesReportMarkup
-				logger.error(error)
+				utils.logger.error(error)
 	except Exception as error:
 		text = ("Something went wrong."
 				+"\n"
@@ -625,7 +636,7 @@ def viewExpenses(bot,update,user_data):
 				+"Type in the category. Or  /cancel  to choose other options."
 				+"\nOr  /home  to return to Main Menu")   
 		markup = reply_markups.expensesReportMarkup
-		logger.error(error)
+		utils.logger.error(error)
 	bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = markup)
@@ -642,8 +653,8 @@ def selectMonth(bot, update, user_data):
 	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
 	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:7] #only current the year and month
 	month_map = {'january':'01','february':'02','march':'03','april':'04','may':'05','june':'06','july':'07','august':'08','september':'09','october':'10','november':'11','december':'12'}
-	cacert_path = dev() #if in dev mode use local cert for mongo ssl connection
-	#logger.info(cacert_path)
+	cacert_path = utils.dev() #if in dev mode use local cert for mongo ssl connection
+	#utils.logger.info(cacert_path)
 	#try fetching expenses from pg
 	try:
 		bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
@@ -674,7 +685,7 @@ def selectMonth(bot, update, user_data):
 				if res_mg is None: #no limit values have been set for the user.
 					text = ("Expenses by Category for "+month+" - "+date[:4]
 							+"\n"
-							+"\n{}".format(convertList(res_pg['Data']))
+							+"\n{}".format(utils.convertList(res_pg['Data']))
 							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nTo view the expenses in comparison to limits, please type"
 							+"  /edit  to input limits"
@@ -686,14 +697,14 @@ def selectMonth(bot, update, user_data):
 					#create the reply
 					text = ("Expenses by Category for "+month+" - "+date[:4]
 							+"\n"
-							+"\n{}".format(convertExp_Lim(res_pg['Data'], res_mg_))
+							+"\n{}".format(utils.convertExp_Lim(res_pg['Data'], res_mg_))
 							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nType  /home  to return to main menu"
 							+"\nOr type in full the month for which you'd like to view expenses")
 			except Exception as error:
 				text = ("ERROR: "+str(error))
 				markup = reply_markups.expensesReportMarkup
-				logger.error(error)
+				utils.logger.error(error)
 	except Exception as error:
 		text = ("Something went wrong."
 				+"\n"
@@ -702,7 +713,7 @@ def selectMonth(bot, update, user_data):
 				+"Type in the category. Or  /cancel  to choose other options."
 				+"\nOr  /home  to return to Main Menu")   
 		markup = reply_markups.expensesReportMarkup
-		logger.error(error)
+		utils.logger.error(error)
 
 	markup = ReplyKeyboardRemove()
 	bot.send_message(chat_id=update.message.chat_id,
@@ -711,8 +722,54 @@ def selectMonth(bot, update, user_data):
 
 	return TYPING_REPLY
 
-#
-def error(bot, update, error):
-	"""Log Errors caused by Updates."""
-	logger.warning('Update "%s" caused error "%s"', update, error)
+# View total expenses for the current year for a selected category
+# TODO: add provision for changing the year
+def totalByCat(bot, update, user_data):
+	#get current categories from pgdb if not already fetched
+	if len(user_data['allCats']) == 0: #not yet fetched
+		categories = []
+		try:
+			bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+			r = requests.get(env.get("URL_CATEGORIES"))
+			response = r.json() 
+			if response['Success'] is not True:     # some error 
+				text = ("Failed!"
+						+"\nComment: " +response['Comment']
+						+"\nError: "+response['Error']+".")
+			else:       # no errors
+				# append the categories to the reply markup list and to limit dict
+				categories = [[KeyboardButton(category['Category'])] for category in response['Data']]
+				user_data['allCats'] = [category['Category'] for category in response['Data']]
+				reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
+				text = ("Select a category from below."
+						+"\nOr  /cancel  to choose other options."
+						+"\nOr  /home  to return to Main Menu")
+		except Exception as e:
+			text = ("Something went wrong."
+					+"\n"
+					+"\nNo connection to the db server."
+					+"\n"
+					+"Or  /cancel to choose other options."
+					+"\nOr  /home  to return to Main Menu")   
+			utils.logger.info(e)
+			reply_markup = ReplyKeyboardRemove()
+	else:
+		categories = [[KeyboardButton(cat)] for cat in user_data['allCats']]
+		reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
+		text = ("Select a category from below."
+				+"\nOr type  /cancel  to choose other options."
+				+"\nOr type  /home  to return to Main Menu")
+	bot.send_message(chat_id=update.message.chat_id,
+					text = text,
+					reply_markup = reply_markup)
+	
+	return CHOOSING
 
+def selectCat(bot, update, user_data):
+	# cat = update.message.text
+
+	return
+
+def error(update: Update, context: CallbackContext):
+	"""Log Errors caused by Updates."""
+	utils.logger.warning('Update "%s" caused error "%s"', update, context.error)
