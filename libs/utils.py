@@ -9,8 +9,10 @@ import psycopg2
 
 # Enable logging
 # https://docs.python.org/3/library/logging.html#logrecord-attributes
+level = logging.INFO
+if env.get("ENV_MODE") == "dev": level = logging.DEBUG
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(funcName)s - %(filename)s:%(lineno)d',
-                    level=logging.INFO)
+                    level=level)
 
 logger = logging.getLogger(__name__)
 
