@@ -39,6 +39,12 @@ expensesReport = [[KeyboardButton("Set Limits")],
 setLimits = [[KeyboardButton("View Limits")],
              [KeyboardButton("Update Limits")]]
 
+months = [
+    [KeyboardButton("Jan"), KeyboardButton("Feb"), KeyboardButton("Mar")],
+    [KeyboardButton("Apr"), KeyboardButton("May"), KeyboardButton("June")],
+    [KeyboardButton("July"), KeyboardButton("Aug"), KeyboardButton("Sept")],
+    [KeyboardButton("Oct"), KeyboardButton("Nov"), KeyboardButton("Dec")]]
+
 newExpenseNoAmtMarkup = ReplyKeyboardMarkup(newExpenseNoAmt, resize_keyboard=True)
 
 newExpenseNoPrfMarkup = ReplyKeyboardMarkup(newExpenseNoPrf, resize_keyboard=True)
@@ -54,6 +60,8 @@ expensesReportMarkup = ReplyKeyboardMarkup(expensesReport, resize_keyboard=True)
 newExpenseMarkup = ReplyKeyboardMarkup(newExpense, resize_keyboard=True)
 
 setLimitsMarkup = ReplyKeyboardMarkup(setLimits, resize_keyboard=True)
+
+monthsMarkup = ReplyKeyboardMarkup(months, resize_keyboard=True)
 
 mainMenuMarkup = ReplyKeyboardMarkup(mainMenu, resize_keyboard=True)
 
