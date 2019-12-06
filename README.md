@@ -17,7 +17,9 @@
 
 $ docker image build -t myexpensesbot:V0.1 .
 
-$ docker container run --rm myexpensesbot:V0.1
+### To test locally
+
+$ docker container run --rm --network="host" myexpensesbot:V0.1
 
 ## Code layout
 
