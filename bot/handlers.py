@@ -785,12 +785,15 @@ def selectCategory(update: Update, context: CallbackContext):
 		rows, error = utils.getsqlrows(conn=conn)
 		if error is None:
 			MonthnCat = utils.gettotals(sqlrows=rows)
-			utils.logger.debug(MonthnCat.loc[category, year].to_dict())
+			expenses = MonthnCat.loc[category, year]
+			utils.logger.debug(expenses.to_dict())
 			categories = [[KeyboardButton('Total expenses for '+cat)] for cat in context.user_data['allCats']]
 			reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
-			text = (category+" expenses for "+year
+			text = ("Current "+category+" expenses for "+year
 					+"\n"
-					+"\n{}".format(utils.convertJson(MonthnCat.loc[category, year].to_dict()))
+					+"\n{}".format(utils.convertJson(expenses.to_dict()))
+					+"\n"
+					+"\nTotal : {}".format(expenses.sum())
 					+"\nType  /cancel  to choose other options."
 					+"\nOr Select a category to view expenses for from below."
 					+"\nOr type  /home  to return to Main Menu")
