@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-##!/usr/bin/python3
+##!/usr/bin/env python3
+#!/usr/bin/python3
 """
 @ author: PMuriuki
 """
@@ -11,7 +11,8 @@ from libs.utils import logger
 from bot import handlers
 from bot.globals import CHOOSING, TYPING_REPLY
 
-# TODO: Add expenses report conversation flow
+# TODO: Add pipeline to accept proof as images and post to API
+# TODO: Improve expenses report conversation flow
 # TODO: Add step to end session/after period of inactivity
 # to require verification on next session
 # TODO: Add SMS verification
@@ -48,7 +49,7 @@ def main():
             TYPING_REPLY: [ MessageHandler(Filters.text, handlers.verifyValue),
                             CommandHandler('home', handlers.home),
                             CommandHandler('cancel', handlers.newExpense),
-                            CommandHandler('done', handlers.value),
+                            CommandHandler('done', handlers.nextExpenseField),
                             CommandHandler('submit', handlers.postExpense)],
             },
         fallbacks=[]
@@ -65,14 +66,17 @@ def main():
                         MessageHandler(Filters.regex('Update Limits'), handlers.updateLimitsWRVW),
                         MessageHandler(Filters.regex('View Limits'), handlers.viewLimits),
                         MessageHandler(Filters.regex('View Expenses By Month'), handlers.totalByMonth),
-                        MessageHandler(Filters.regex('View Expenses By Category'), handlers.totalByCat),
+                        MessageHandler(Filters.regex('View Expenses By Category'), handlers.totalByCategory),
                         CommandHandler('update', handlers.updateLimitsnoRVW),
                         CommandHandler('home', handlers.home),
                         CommandHandler('cancel', handlers.expensesReport),
-                        MessageHandler(Filters.text, handlers.limitKey),
+                        # MessageHandler(Filters.text, handlers.limitKey),
                         CommandHandler('done', handlers.reviewLimits)],
-            TYPING_REPLY : [MessageHandler(Filters.regex('^[0-9]'), handlers.limitValue),
-                            MessageHandler(Filters.regex('^[a-zA-Z]'), handlers.selectMonth),
+            TYPING_REPLY : [MessageHandler(Filters.regex('(^Set limit for )'), handlers.limitKey),
+                            MessageHandler(Filters.regex('^[0-9]'), handlers.limitValue),
+                            # MessageHandler(Filters.regex('^[a-zA-Z]'), handlers.selectMonth),
+                            MessageHandler(Filters.regex('(?:Jan$|Feb$|Mar$|Apr$|May$|June$|July$|Aug$|Sept$|Oct$|Nov$|Dec$)'), handlers.selectMonth),
+                            MessageHandler(Filters.regex('(^Total expenses for )'), handlers.selectCategory),
                             CommandHandler('submit', handlers.postLimits),
                             CommandHandler('edit', handlers.setLimits),
                             CommandHandler('cancel', handlers.expensesReport),
