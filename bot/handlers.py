@@ -778,17 +778,21 @@ def totalByCategory(update: Update, context: CallbackContext):
 def selectCategory(update: Update, context: CallbackContext):
 	"""Flow to fetch various expense totals for the year for the selected category and display"""
 	category = update.message.text.split('Total expenses for ')[1]
+	year = 2019
 	utils.logger.debug(category)
 	conn, error = utils.connect()
 	if error is None:
 		rows, error = utils.getsqlrows(conn=conn)
 		if error is None:
 			MonthnCat = utils.gettotals(sqlrows=rows)
-			utils.logger.debug((MonthnCat.loc[category, 2019].values))
+			utils.logger.debug(MonthnCat.loc[category, year].to_dict())
 			categories = [[KeyboardButton('Total expenses for '+cat)] for cat in context.user_data['allCats']]
 			reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
-			text = ("Select a category from below."
-					+"\nOr type  /cancel  to choose other options."
+			text = (category+" expenses for "+year
+					+"\n"
+					+"\n{}".format(utils.convertJson(MonthnCat.loc[category, year].to_dict()))
+					+"\nType  /cancel  to choose other options."
+					+"\nOr Select a category to view expenses for from below."
 					+"\nOr type  /home  to return to Main Menu")
 		else: 
 			utils.logger.error(error)

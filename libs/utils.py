@@ -96,7 +96,7 @@ def connect():
         logger.info('Connecting to the PostgreSQL database...')
         params = {"host":env.get("DB_HOST"),"database":env.get("DB_NAME"),"user":env.get("DB_USER"),
                 "password":env.get("DB_PASSWORD"),"port":env.get("DB_PORT")}
-        logger.info("connstr: "+str(params))
+        logger.debug("connstr: "+str(params))
         conn = psycopg2.connect(**params)
       
         # create a cursor
@@ -134,7 +134,7 @@ def getsqlrows(conn):
 
 def getdatatable(sqlrows):
     """getdatatable creates a table with expense rows from rows returned from sql query"""
-    month_map = {1:'Jan',2:'Feb',3:'Mar',4:'April',5:'May',6:'June',7:'July',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
+    month_map = {1:'Jan',2:'Feb',3:'Mar',4:'April',5:'May',6:'June',7:'July',8:'Aug',9:'Sept',10:'Oct',11:'Nov',12:'Dec'}
     day_map = {0:'Mon',1:'Tue',2:'Wed',3:'Thu',4:'Fri',5:'Sat',6:'Sun'}
     df = pd.DataFrame(data=sqlrows,columns=['rowid','timestamp','description','proof','amount','category'])
     df_raw = df.copy()
