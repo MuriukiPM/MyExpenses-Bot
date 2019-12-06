@@ -16,7 +16,7 @@ from bot.globals import *
 def start(update: Update, context: CallbackContext):
 	chat_ID = str(update.message.from_user.id)
 	first_name = update.message.chat.first_name
-	#utils.logger.info('Chat ID : %s', chat_ID)
+	utils.logger.debug('Chat ID : %s', chat_ID)
 	text = ("Welcome "+first_name+", I am Icarium"
 			+"\n"
 			+"\nPlease type your confirmation code for verification")
@@ -33,7 +33,7 @@ def verify(update: Update, context: CallbackContext):
 	mode = env.get("ENV_MODE","")
 	if mode=="dev": verificationNumber = env.get("DEV_CHATID","")
 	else: verificationNumber = update.message.text
-	#utils.logger.info(verificationNumber)
+	utils.logger.debug(verificationNumber)
 	if verificationNumber == str(update.message.from_user.id):
 		# Initialise some variables
 		context.user_data['input'] = {}
@@ -76,8 +76,9 @@ def home(update: Update, context: CallbackContext):
 		reply_markup = reply_markups.mainMenuMarkup)
 	return ConversationHandler.END
 
-# Flow: Create new expense 
+# Flow for expense input begins here
 def newExpense (update: Update, context: CallbackContext):
+	"""Initiator for the expenses input flow"""
 	text = ("Select a field to fill in from below, once ready, tap Submit."
 			+"\nOr tap Abort to return to Main menu")
 	context.bot.send_message(chat_id=update.message.chat_id,
@@ -85,7 +86,8 @@ def newExpense (update: Update, context: CallbackContext):
 					reply_markup = reply_markups.newExpenseMarkup) 
 	return CHOOSING
 
-# Timestamp column: YYYY-MM-DD HH:MM:SS
+# Create new expense 
+# timestamp column: YYYY-MM-DD HH:MM:SS
 # TODO: Use /done to navigate back to new()
 # FIXME: deal with incorrect input: if not month: use regex on dispatch handler
 def timestamp(update: Update, context: CallbackContext):
@@ -108,7 +110,8 @@ def timestamp(update: Update, context: CallbackContext):
 	
 	return TYPING_REPLY
 
-# Description column
+# Create new expense 
+# description column
 # TODO: Add feature: set how many months back to look
 # TODO: Add bot message just before the query to state how far back we are looking
 # TODO: Add a check to see if there is sufficient data depending on number of descr to query
@@ -144,7 +147,7 @@ def description(update: Update, context: CallbackContext):
 				+"\n"
 				+"Type in the description. Or  /cancel  to return to choose other options."
 				+"\nOr  /home  to return to Main Menu")   
-		utils.logger.info(e)
+		utils.logger.error(e)
 		reply_markup = ReplyKeyboardRemove()
 	context.user_data['currentExpCat'] = "Description"
 	context.bot.send_message(chat_id=update.message.chat_id,
@@ -152,7 +155,8 @@ def description(update: Update, context: CallbackContext):
 					reply_markup = reply_markup)
 	return TYPING_REPLY
 
-# Category column
+# Create new expense 
+# category column
 # TODO: Consider using userdata saved categories
 def category(update: Update, context: CallbackContext):
 	categories = []
@@ -180,7 +184,7 @@ def category(update: Update, context: CallbackContext):
 				+"\n"
 				+"Type in the category. Or  /cancel  to choose other options."
 				+"\nOr  /home  to return to Main Menu")   
-		utils.logger.info(e)
+		utils.logger.error(e)
 		reply_markup = ReplyKeyboardRemove()
 	context.user_data['currentExpCat'] = "Category" #update the check for most recently updated field
 	context.bot.send_message(chat_id=update.message.chat_id,
@@ -189,7 +193,8 @@ def category(update: Update, context: CallbackContext):
 	
 	return TYPING_REPLY
 
-# Proof column
+# Create new expense 
+# proof column
 # TODO: Accept image, base64 encode, return string -- <EDIT> (string too long)
 def proof(update: Update, context: CallbackContext):
 	context.user_data['currentExpCat'] = "Proof"
@@ -200,6 +205,7 @@ def proof(update: Update, context: CallbackContext):
 					reply_markup = ReplyKeyboardRemove())
 	return TYPING_REPLY
 
+# Create new expense 
 # Amount column
 # TODO: Add keys of most common amounts
 def amount(update: Update, context: CallbackContext):
@@ -211,14 +217,15 @@ def amount(update: Update, context: CallbackContext):
 					reply_markup = ReplyKeyboardRemove())
 	return TYPING_REPLY
 
-# Confirmation of entered value
+# Create new expense 
+# confirmation of entered value
 def verifyValue(update: Update, context: CallbackContext):
 	"""Verify various inputs to proceed"""
 	data = update.message.text #grab the reply text
 
-	# if the timestamp was just set
+	# if the timestamp was just set sort the input
 	if (context.user_data['currentExpCat'] == 'Timestamp'):
-		try: #if datetime object can be obtained from input
+		try: #if datetime object can be obtained from input. expected to raise exception
 			datetime.datetime.strptime(data,"%Y-%m-%d %H:%M:%S")
 		except ValueError: #time passed given
 			s = update.message.text.split() #split on space
@@ -239,7 +246,7 @@ def verifyValue(update: Update, context: CallbackContext):
 			+context.user_data['currentExpCat']+" value." 
 			+"\nOr  /cancel  to choose other options ")
 	markup = ReplyKeyboardRemove()
-	#If amount was just entered, provide summary of values
+	#If amount was just entered, provide summary of values and update 'text' var
 	if (context.user_data['currentExpCat'] == 'Amount'):
 		text = ("Received '"+data+"' as your "+context.user_data['currentExpCat']+" value."
 			+"\nCurrent entries: "
@@ -254,8 +261,9 @@ def verifyValue(update: Update, context: CallbackContext):
 	
 	return TYPING_REPLY
 
-# Final value to post
-def value(update: Update, context: CallbackContext):
+# Create new expense 
+# display and allow other field selection
+def nextExpenseField(update: Update, context: CallbackContext):
 	"""Provide user with keyboards to select other input categories"""
 	# Choose relevant reply markup
 	markup = context.user_data['markups'][context.user_data['currentExpCat']]		
@@ -268,7 +276,8 @@ def value(update: Update, context: CallbackContext):
 
 	return CHOOSING
 
-# Post values to provided endpoint to update the db
+# Create new expense 
+# post values to provided endpoint to update the db
 # TODO: On successful submit, for all limits selected, display value and
 # if no threshold set, ask if user wants to set the limits
 def postExpense(update: Update, context: CallbackContext):
@@ -287,7 +296,7 @@ def postExpense(update: Update, context: CallbackContext):
 									}
 								)
 			response = r.json() 
-			#utils.logger.info(response)
+			utils.logger.debug(response)
 			if response['Success'] is not True:     # some error 
 				text = ("Failed!"
 						+"\nComment: " +response['Comment']
@@ -305,7 +314,7 @@ def postExpense(update: Update, context: CallbackContext):
 			text = ("Something went wrong."
 					+"\n"
 					+"\nNo connection to the server.")   
-			utils.logger.info("Post failed with error: "+str(e))
+			utils.logger.error("Post failed with error: "+str(e))
 	else:	# fields empty or amount empty
 		text = ("Please complete filling in the fields.")
 	
@@ -326,7 +335,9 @@ def expensesReport(update: Update, context: CallbackContext):
 	
 	return CHOOSING
 
-# set limits
+# Set limits
+# select the category
+# TODO: Add check for whether all limits have been set and transition to update?
 def setLimits(update: Update, context: CallbackContext):
 	"""Initiate flow to set values for each limit category"""
 	#get current categories from pgdb if not already fetched
@@ -342,7 +353,7 @@ def setLimits(update: Update, context: CallbackContext):
 						+"\nError: "+response['Error']+".")
 			else:       # no errors
 				# append the categories to the reply markup list and to limit dict
-				categories = [[KeyboardButton(category['Category'])] for category in response['Data']]
+				categories = [[KeyboardButton('Set limit for '+category['Category'])] for category in response['Data']]
 				context.user_data['limits'] = {category['Category']:"" for category in response['Data']}
 				reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
 				text = ("Select a category from below."
@@ -355,10 +366,10 @@ def setLimits(update: Update, context: CallbackContext):
 					+"\n"
 					+"Or  /cancel to choose other options."
 					+"\nOr  /home  to return to Main Menu")   
-			utils.logger.info(e)
+			utils.logger.error(e)
 			reply_markup = ReplyKeyboardRemove()
 	else:
-		categories = [[KeyboardButton(key)] for key in context.user_data['limits'].keys()]
+		categories = [[KeyboardButton('Set limit for '+key)] for key in context.user_data['limits'].keys()]
 		reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
 		text = ("Select a category from below."
 				+"\nOr type  /cancel  to choose other options."
@@ -367,11 +378,12 @@ def setLimits(update: Update, context: CallbackContext):
 					text = text,
 					reply_markup = reply_markup)
 	
-	return CHOOSING
+	return TYPING_REPLY
 
-# Select the category and request for limit value
+# Set limits
+# confirm the category and request for limit value
 def limitKey(update: Update, context: CallbackContext):
-	data = update.message.text
+	data = update.message.text.split('Set limit for ')[1]
 	context.user_data['currentLimitCat'] = data
 	text = ("Type the limit value for the "+data+" category"
 			+"\nOr  /cancel  to choose other categories")
@@ -382,7 +394,8 @@ def limitKey(update: Update, context: CallbackContext):
 
 	return TYPING_REPLY
 
-# update the limit value
+# Set limits
+# confirm limit value
 # TODO: better error message on empty category tracker
 def limitValue(update: Update, context: CallbackContext):
 	"""Store the input value for the limit category"""
@@ -405,7 +418,8 @@ def limitValue(update: Update, context: CallbackContext):
 	
 	return CHOOSING
 
-# Review limits before posting
+# Set limits
+# review limits before posting
 def reviewLimits(update: Update, context: CallbackContext):
 	"""Check all input limits before writing to nosql db"""
 	text = ("Limits to post are as follows"
@@ -421,7 +435,8 @@ def reviewLimits(update: Update, context: CallbackContext):
 
 	return TYPING_REPLY
 
-# Post the limit values to the nosql db: mongo atlas
+# Set limits
+# post the limit values to the nosql db: mongo atlas
 # TODO: Deal with failed post better
 def postLimits(update: Update, context: CallbackContext):
 	"""Insert the input limits to nosql db or choose to update if not first time"""
@@ -470,7 +485,7 @@ def postLimits(update: Update, context: CallbackContext):
 def viewLimits(update: Update, context: CallbackContext):
 	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
 	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
-	#utils.logger.info(cacert_path)
+	utils.logger.debug("ssl cert: "+cacert_path)
 	try:
 		context.bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 		client = pymongo.MongoClient(env.get("MONGO_HOST"),
@@ -493,7 +508,7 @@ def viewLimits(update: Update, context: CallbackContext):
 	except Exception as error:
 		text = ("ERROR: "+str(error))
 		reply_markup = reply_markups.expensesReportMarkup
-		utils.logger.info(error)
+		utils.logger.error(error)
 	context.bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = reply_markup)
@@ -512,7 +527,7 @@ def updateLimitsnoRVW(update: Update, context: CallbackContext):
 	"""Update the limits previously set immediately"""
 	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
 	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
-	#logger.info(cacert_path)
+	utils.logger.debug("ssl cert: "+cacert_path)
 	try: 
 		context.bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
 		client = pymongo.MongoClient(env.get("MONGO_HOST"),
@@ -539,6 +554,7 @@ def updateLimitsnoRVW(update: Update, context: CallbackContext):
 	return CHOOSING
 
 # View total expenses for the current month
+# select month
 # TODO: Provide better status messages when fetching data from servers
 # FIXME: deal with incorrect input: if not month: use regex on dispatch handler
 def totalByMonth(update: Update, context: CallbackContext):
@@ -549,7 +565,7 @@ def totalByMonth(update: Update, context: CallbackContext):
 	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:7] #only current the year and month
 	if env.get("DEV_CACERT_PATH",None) is None:	cacert_path = None
 	else: cacert_path = env.get("HOME", "") + env.get("DEV_CACERT_PATH",None)
-	#logger.info(cacert_path)
+	utils.logger.debug("ssl cert: "+cacert_path)
 	#try fetching expenses from pg
 	try:
 		context.bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
@@ -562,9 +578,9 @@ def totalByMonth(update: Update, context: CallbackContext):
 			markup = reply_markups.expensesReportMarkup
 		if res_pg['Data'] is None: #no expenses for current month
 			text = ("You have not entered any expenses for "+month_map[date[5:7]]+" - "+date[:4]
-					+"\nPlease type in full the month for which you'd like to view expenses for eg May, December"
+					+"\nPlease select from below the month for which you'd like to view expenses for"
 					+"\nOr type  /cancel  to abort.")
-			markup = ReplyKeyboardRemove()
+			markup = reply_markups.monthsMarkup
 			context.bot.send_message(chat_id=update.message.chat_id,
 									text = text,
 									reply_markup = markup)
@@ -590,9 +606,9 @@ def totalByMonth(update: Update, context: CallbackContext):
 							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nTo view the expenses in comparison to limits, please type" 
 							+"  /edit  to input limits"
-							+"\nOr type in full the month for which you'd like to view expenses for eg May, December"
+							+"\nOr select from below the month for which you'd like to view expenses for"
 							+"\nOr type  /home  to finish")
-					markup = ReplyKeyboardRemove()
+					markup = reply_markups.monthsMarkup
 					context.bot.send_message(chat_id=update.message.chat_id,
 									text = text,
 									reply_markup = markup)
@@ -607,8 +623,8 @@ def totalByMonth(update: Update, context: CallbackContext):
 							+"\n{}".format(utils.convertExp_Lim(res_pg['Data'], res_mg_))
 							+"\nTotal expenses: {}".format(sum_exp)
 							+"\nType  /home  to return to main menu"
-							+"\nOr type in full the month for which you'd like to view expenses for eg May, December")
-					markup = ReplyKeyboardRemove()
+							+"\nOr select from below the month for which you'd like to view expenses for")
+					markup = reply_markups.monthsMarkup
 					context.bot.send_message(chat_id=update.message.chat_id,
 									text = text,
 									reply_markup = markup)
@@ -633,18 +649,19 @@ def totalByMonth(update: Update, context: CallbackContext):
 
 	return CHOOSING
 
-# Confirm the month and display
+# View total expenses for the current month
+# confirm the month and display
 # TODO: add provision for changing the year
 # FIXME: deal with incorrect input: if not month: use regex on dispatch handler
 def selectMonth(update: Update, context: CallbackContext):
-	"""Flow to fetch various data and display"""
+	"""Flow to fetch various expense totals for the month and display"""
 	month = (update.message.text).lower()
 	#get the local time
 	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
 	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:7] #only current the year and month
 	month_map = {'january':'01','february':'02','march':'03','april':'04','may':'05','june':'06','july':'07','august':'08','september':'09','october':'10','november':'11','december':'12'}
 	cacert_path = utils.dev() #if in dev mode use local cert for mongo ssl connection
-	#utils.logger.info(cacert_path)
+	utils.logger.debug("ssl cert: "+cacert_path)
 	#try fetching expenses from pg
 	try:
 		context.bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
@@ -713,8 +730,9 @@ def selectMonth(update: Update, context: CallbackContext):
 	return TYPING_REPLY
 
 # View total expenses for the current year for a selected category
+# select category
 # TODO: add provision for changing the year
-def totalByCat(update: Update, context: CallbackContext):
+def totalByCategory(update: Update, context: CallbackContext):
 	#get current categories from pgdb if not already fetched
 	if len(context.user_data['allCats']) == 0: #not yet fetched
 		categories = []
@@ -728,7 +746,7 @@ def totalByCat(update: Update, context: CallbackContext):
 						+"\nError: "+response['Error']+".")
 			else:       # no errors
 				# append the categories to the reply markup list and to limit dict
-				categories = [[KeyboardButton(category['Category'])] for category in response['Data']]
+				categories = [[KeyboardButton('Total expenses for '+category['Category'])] for category in response['Data']]
 				context.user_data['allCats'] = [category['Category'] for category in response['Data']]
 				reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
 				text = ("Select a category from below."
@@ -741,10 +759,10 @@ def totalByCat(update: Update, context: CallbackContext):
 					+"\n"
 					+"Or  /cancel to choose other options."
 					+"\nOr  /home  to return to Main Menu")   
-			utils.logger.info(e)
+			utils.logger.error(e)
 			reply_markup = ReplyKeyboardRemove()
 	else:
-		categories = [[KeyboardButton(cat)] for cat in context.user_data['allCats']]
+		categories = [[KeyboardButton('Total expenses for '+cat)] for cat in context.user_data['allCats']]
 		reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
 		text = ("Select a category from below."
 				+"\nOr type  /cancel  to choose other options."
@@ -753,21 +771,59 @@ def totalByCat(update: Update, context: CallbackContext):
 					text = text,
 					reply_markup = reply_markup)
 	
-	return CHOOSING
+	return TYPING_REPLY
 
-def selectCat(update: Update, context: CallbackContext):
-	# cat = update.message.text
+# View total expenses for the current year for a selected category
+# confirm the category and display
+def selectCategory(update: Update, context: CallbackContext):
+	"""Flow to fetch various expense totals for the year for the selected category and display"""
+	category = update.message.text.split('Total expenses for ')[1]
+	utils.logger.debug(category)
 	conn, error = utils.connect()
 	if error is None:
 		rows, error = utils.getsqlrows(conn=conn)
 		if error is None:
 			MonthnCat = utils.gettotals(sqlrows=rows)
-			utils.logger.info((MonthnCat.loc['Housing', 2019].values))
-		else: utils.logger.info(error)
-	else: utils.logger.info(error)
+			utils.logger.debug((MonthnCat.loc[category, 2019].values))
+			categories = [[KeyboardButton('Total expenses for '+cat)] for cat in context.user_data['allCats']]
+			reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
+			text = ("Select a category from below."
+					+"\nOr type  /cancel  to choose other options."
+					+"\nOr type  /home  to return to Main Menu")
+		else: 
+			utils.logger.error(error)
+			text = ("Something went wrong!"
+					+"\nType  /cancel  to choose other options."
+					+"\nOr type  /home  to return to Main Menu")
+			reply_markup = ReplyKeyboardRemove()
+	else: 
+		utils.logger.error(error)
+		text = ("Something went wrong!"
+				+"\nType  /cancel  to choose other options."
+				+"\nOr type  /home  to return to Main Menu")
+		reply_markup = ReplyKeyboardRemove()
+	context.bot.send_message(chat_id=update.message.chat_id,
+							text = text,
+							reply_markup = reply_markup)
+	
+	return TYPING_REPLY
 
-	return
+# View total expenses for the current year for a selected category
+# display and allow other category selection for the selected year
+def nextCategory(update: Update, context: CallbackContext):
+	"""Provide user with keyboards to select other categories"""
+	# Choose relevant reply markup
+	markup = context.user_data['markups'][context.user_data['currentExpCat']]		
+	text = ("Great! Choose next option to populate." 
+			+"\nOr if done, tap Submit to post." 
+			+"\nOr tap Abort to return to Main Menu")
+	context.bot.send_message(chat_id=update.message.chat_id,
+					text = text,
+					reply_markup = markup) 
 
+	return CHOOSING
+
+# Error handler
 def error(update: Update, context: CallbackContext):
 	"""Log Errors caused by Updates."""
 	utils.logger.warning('Update "%s" caused error "%s"', update, context.error)
