@@ -659,7 +659,7 @@ def selectMonth(update: Update, context: CallbackContext):
 	#get the local time
 	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
 	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:7] #only current the year and month
-	month_map = {'january':'01','february':'02','march':'03','april':'04','may':'05','june':'06','july':'07','august':'08','september':'09','october':'10','november':'11','december':'12'}
+	month_map = {'jan':'01','feb':'02','mar':'03','apr':'04','may':'05','june':'06','july':'07','aug':'08','sept':'09','oct':'10','nov':'11','dec':'12'}
 	cacert_path = utils.dev() #if in dev mode use local cert for mongo ssl connection
 	utils.logger.debug("ssl cert: "+cacert_path)
 	#try fetching expenses from pg
@@ -786,17 +786,18 @@ def selectCategory(update: Update, context: CallbackContext):
 		if error is None:
 			MonthnCat = utils.gettotals(sqlrows=rows)
 			expenses = MonthnCat.loc[category, year]
-			utils.logger.debug(expenses.to_dict())
+			# utils.logger.debug(expenses.to_dict())
 			categories = [[KeyboardButton('Total expenses for '+cat)] for cat in context.user_data['allCats']]
 			reply_markup = ReplyKeyboardMarkup(categories, resize_keyboard=True)
-			text = ("Current "+category+" expenses for "+year
-					+"\n"
+			# utils.logger.debug("\n{}".format(utils.convertJson(expenses.to_dict())))
+			# utils.logger.debug("\nTotal : {}".format(expenses.sum()))
+			text = ("Current "+category+" expenses for "+str(year)
 					+"\n{}".format(utils.convertJson(expenses.to_dict()))
-					+"\n"
 					+"\nTotal : {}".format(expenses.sum())
 					+"\nType  /cancel  to choose other options."
 					+"\nOr Select a category to view expenses for from below."
 					+"\nOr type  /home  to return to Main Menu")
+			# utils.logger.debug(text)
 		else: 
 			utils.logger.error(error)
 			text = ("Something went wrong!"
