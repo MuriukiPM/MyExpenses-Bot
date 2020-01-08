@@ -75,6 +75,7 @@ def main():
     ))
 
     # View various reports from expenses
+    # TODO: Handle unexpected inputs: eg typing year instead of selecting month
     dispatcher.add_handler(ConversationHandler(
         entry_points=[MessageHandler(Filters.regex('Expenses Report'), expensestats.expensesReport)],
         states = {

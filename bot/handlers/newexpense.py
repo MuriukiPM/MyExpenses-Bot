@@ -17,12 +17,13 @@ def newExpense (update: Update, context: CallbackContext):
 	context.bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = reply_markups.newExpenseMarkup) 
+	
 	return CHOOSING
 
 # Create new expense 
 # timestamp column: YYYY-MM-DD HH:MM:SS
 # TODO: Use /done to navigate back to new()
-# FIXME: deal with incorrect input: if not month: use regex on dispatch handler
+# FIXME: deal with incorrect input
 def timestamp(update: Update, context: CallbackContext):
 	context.user_data['currentExpCat'] = "Timestamp"
 	# Find out the local time and date
@@ -210,7 +211,7 @@ def nextExpenseField(update: Update, context: CallbackContext):
 
 # Create new expense 
 # post values to provided endpoint to update the db
-# TODO: On successful submit, for all limits selected, display value and
+# TODO: On successful submit, for the relevant budget limit, display value and
 # if no threshold set, ask if user wants to set the limits
 def postExpense(update: Update, context: CallbackContext):
 	# Check for empty fields. Timestamp, Amount, Category has to be filled always

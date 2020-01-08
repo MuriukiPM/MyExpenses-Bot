@@ -26,7 +26,6 @@ def expensesReport(update: Update, context: CallbackContext):
 # View total expenses for a given month
 # TODO: Provide better status messages when fetching data from servers
 # TODO: show all of the current year's expenses alongside total amount for each expense category in that month
-# FIXME: deal with incorrect input: if not month: use regex on dispatch handler
 def totalByMonth(update: Update, context: CallbackContext):
 	"""Flow to view current expenses for a given month starts here"""
 	utc_datetime = datetime.datetime.utcnow()
@@ -158,7 +157,6 @@ def viewByMonth(update: Update, context: CallbackContext):
 
 # View total expenses for the provided month
 # confirm the month and display
-# FIXME: deal with incorrect input: if not month: use regex on dispatch handler
 def selectMonth(update: Update, context: CallbackContext):
 	"""Flow to fetch various expense totals for the month and display"""
 	month = update.message.text
@@ -246,7 +244,6 @@ def selectMonth(update: Update, context: CallbackContext):
 	return TYPING_REPLY
 
 # View total expenses for the selected year for a selected category
-# TODO: sort the displayed results in correct month order
 # TODO: Also display the current budget limits alongside, if they are set
 def totalByCategory(update: Update, context: CallbackContext):
 	"""Flow to view current expenses for a given month starts here"""

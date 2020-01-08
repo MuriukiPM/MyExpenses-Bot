@@ -11,6 +11,7 @@ from libs import utils
 from bot.globals import TYPING_REPLY, CHOOSING 
 
 # Flow for budget begins here
+# TODO: Ask for monthly budgetary limits per category
 # TODO: Temporarily store results from mongo, pg queries in memory to speed up?
 def budget(update: Update, context: CallbackContext):
 	"""Initiator for the budget flow"""
@@ -238,5 +239,3 @@ def updateLimitsnoRVW(update: Update, context: CallbackContext):
 					reply_markup = markup)
 
 	return CHOOSING
-
-# TODO: Ask for monthly budgetary limits per category
