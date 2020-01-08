@@ -151,7 +151,8 @@ def getdatatable(sqlrows):
 def gettotals(sqlrows):
     """gettotals creates a multi-index table of sum of expenses sorted by category and month"""
     _, df = getdatatable(sqlrows=sqlrows)
-    months = df.month.unique()
+    # months = df.month.unique()
+    months = ['Jan', 'Feb', 'Mar', 'April', 'May', 'June', 'July', 'Aug', 'Sept', 'Dec']
     MonthnCat = df.groupby(['category','year','month'])['amount'].sum().unstack(1)
     MonthnCat = MonthnCat.reindex(pd.MultiIndex.from_product([MonthnCat.index.levels[0], months], names=['category', 'month']))
     MonthnCat.fillna(value=0.0, inplace=True)

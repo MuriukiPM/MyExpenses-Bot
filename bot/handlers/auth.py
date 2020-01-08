@@ -46,6 +46,7 @@ def verify(update: Update, context: CallbackContext):
 		context.user_data['allCats'] = []
 		context.user_data['currentExpCat'] = [] #the current expenses category
 		context.user_data['currentLimitCat'] = [] #the current limit category
+		context.user_data['inputYear'] = '' #the typed year vealue
 		#TS : NOTSMKP, DESCR : NODESCRMKP ,PRF : NOPRFMKP, CAT : NOCATMKP, AMT : NOAMTMKP 
 		context.user_data['markups'] = dict(zip([key for key, values in context.user_data['input'].items()],
 										reply_markups.expenseFlowMarkups))
@@ -70,6 +71,7 @@ def home(update: Update, context: CallbackContext):
 	# end of conv, so clear some stuff
 	context.user_data['currentExpCat'] = []
 	context.user_data['limits'] = {}
+	context.user_data['inputYear'] = ''
 	#send
 	context.bot.send_message(chat_id=chat_ID,
 		text="Main Options",
@@ -77,6 +79,11 @@ def home(update: Update, context: CallbackContext):
 	return ConversationHandler.END
 
 # Error handler
+# TODO: update to show more context: calling function etc
 def error(update: Update, context: CallbackContext):
 	"""Log Errors caused by Updates."""
-	utils.logger.warning('Update "%s" caused error "%s"', update, context.error)
+	utils.logger.error('Update "%s" caused error "%s"', update.message['text'], context.error)
+
+# TODO: Add step to end session/after period of inactivity
+# to require verification on next session
+# TODO: Add SMS verification

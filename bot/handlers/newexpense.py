@@ -13,8 +13,7 @@ from bot.globals import *
 # Flow for expense input begins here
 def newExpense (update: Update, context: CallbackContext):
 	"""Initiator for the expenses input flow"""
-	text = ("Select a field to fill in from below, once ready, tap Submit."
-			+"\nOr tap Abort to return to Main menu")
+	text = ("Select a field to fill in from below, once ready, tap Submit.")
 	context.bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = reply_markups.newExpenseMarkup) 
@@ -129,7 +128,7 @@ def category(update: Update, context: CallbackContext):
 
 # Create new expense 
 # proof column
-# TODO: Accept image, base64 encode, return string -- <EDIT> (string too long)
+# TODO: Accept image. Call API to upload in multiform
 def proof(update: Update, context: CallbackContext):
 	context.user_data['currentExpCat'] = "Proof"
 	text = ("Type in the proof. Or  /cancel  to choose other options."
@@ -202,8 +201,7 @@ def nextExpenseField(update: Update, context: CallbackContext):
 	# Choose relevant reply markup
 	markup = context.user_data['markups'][context.user_data['currentExpCat']]		
 	text = ("Great! Choose next option to populate." 
-			+"\nOr if done, tap Submit to post." 
-			+"\nOr tap Abort to return to Main Menu")
+			+"\nOr if done, tap Submit to post.")
 	context.bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = markup) 
@@ -257,3 +255,5 @@ def postExpense(update: Update, context: CallbackContext):
                     reply_markup = reply_markups.newExpenseMarkup)
 	
 	return CHOOSING
+
+# TODO: Add pipeline to accept proof as images and post to API
