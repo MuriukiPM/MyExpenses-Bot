@@ -2,42 +2,45 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 # Predefine Main menu keyboard
 mainMenu = [[KeyboardButton("New Expense")], 
-            [KeyboardButton("Expenses Report"),KeyboardButton("Search Expenses")]]
+            [KeyboardButton("Expenses Report"), KeyboardButton("Budget")],
+            [KeyboardButton("Search Expenses"), KeyboardButton("List Expenses")]]
 
 newExpense = [  [KeyboardButton("Timestamp"), KeyboardButton("Description")],
                 [KeyboardButton("Proof"), KeyboardButton("Category")],
                 [KeyboardButton("Amount"), KeyboardButton("Submit")], 
-                [KeyboardButton("Abort")]]
+                [KeyboardButton("Main Menu")]]
 
 newExpenseNoTs = [
     [KeyboardButton("Description"), KeyboardButton("Proof"), KeyboardButton("Category")],
-    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
+    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Main Menu")]]
 
 newExpenseNoDescr = [
     [KeyboardButton("Timestamp"), KeyboardButton("Proof"), KeyboardButton("Category")],
-    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
+    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Main Menu")]]
 
 newExpenseNoPrf = [
     [KeyboardButton("Timestamp"), KeyboardButton("Description"), KeyboardButton("Category")],
-    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
+    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Main Menu")]]
 
 newExpenseNoAmt = [
     [KeyboardButton("Timestamp"), KeyboardButton("Description"), KeyboardButton("Proof")],
-    [KeyboardButton("Category"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
+    [KeyboardButton("Category"), KeyboardButton("Submit"), KeyboardButton("Main Menu")]]
 
 newExpenseNoCat = [
     [KeyboardButton("Timestamp"), KeyboardButton("Description"), KeyboardButton("Proof")],
-    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Abort")]]
+    [KeyboardButton("Amount"), KeyboardButton("Submit"), KeyboardButton("Main Menu")]]
 
-expensesReport = [[KeyboardButton("Set Limits")],
-                [KeyboardButton("View Limits")],
-                [KeyboardButton("Update Limits")],
-                [KeyboardButton("View Expenses By Month")],
+budgetLimits = [[KeyboardButton("Set Budget Limits")],
+                [KeyboardButton("View Budget Limits")],
+                [KeyboardButton("Update Budget Limits")],
+                [KeyboardButton("Main Menu")]]
+
+expenseStats = [[KeyboardButton("View Expenses By Month")],
                 [KeyboardButton("View Expenses By Category")],
-                [KeyboardButton("Abort")]]
+                [KeyboardButton("Main Menu")]]
 
-setLimits = [[KeyboardButton("View Limits")],
-             [KeyboardButton("Update Limits")]]
+setLimits = [[KeyboardButton("View Budget Limits")],
+             [KeyboardButton("Update Budget Limits")]]
 
 months = [
     [KeyboardButton("Jan"), KeyboardButton("Feb"), KeyboardButton("Mar")],
@@ -55,7 +58,9 @@ newExpenseNoTsMarkup = ReplyKeyboardMarkup(newExpenseNoTs, resize_keyboard=True)
 
 newExpenseNoCatMarkup = ReplyKeyboardMarkup(newExpenseNoCat, resize_keyboard=True)
 
-expensesReportMarkup = ReplyKeyboardMarkup(expensesReport, resize_keyboard=True)
+budgetLimitsMarkup = ReplyKeyboardMarkup(budgetLimits, resize_keyboard=True)
+
+expenseStatsMarkup = ReplyKeyboardMarkup(expenseStats, resize_keyboard=True)
 
 newExpenseMarkup = ReplyKeyboardMarkup(newExpense, resize_keyboard=True)
 
