@@ -1,0 +1,13 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build',
+          '--file',
+          'deploy/Dockerfile-${_ENV_ID}',
+          '-t',
+          'gcr.io/${_PROJECT_ID}/${_IMAGE_ID}:${_REV_ID}',
+          '.' ]
+substitutions:
+  _ENV_ID: staging
+  _REV_ID: latest
+images:
+- 'gcr.io/${_PROJECT_ID}/${_IMAGE_ID}:${_REV_ID}'

@@ -17,9 +17,17 @@
 
 $ docker image build -t myexpensesbot:V0.1 .
 
+Using cloud build (most recent local commit). Requires gcloud project ID
+
+$ gcloud builds submit --project $project --config=deploy/cloudbuild.yaml --substitutions _IMAGE_ID=myexpensesbot,_PROJECT_ID=$project,_REV_ID=$(git rev-parse HEAD),_ENV_ID=staging .
+
 ### To test locally
 
 $ docker container run --rm --network="host" myexpensesbot:V0.1
+
+Run on cloud instance using image from container repo (requires access to pull image)
+
+$ docker container run -d --rm --network="host" gcr.io/$project/myexpensesbot:$(git rev-parse HEAD)
 
 ## Code layout
 
