@@ -51,3 +51,7 @@ $ docker container run -d --rm --network="host" gcr.io/$project/myexpensesbot:$(
 			- URL_VIEW_EXPENSE					GET Request endpoint
 			- MONGO_HOST						URL of MONGO database host
 			- MONGO_DATABASE_NAME				Name of the Mongo db.collection to be used
+>
+> ## TODO:
+>
+>	- Update readme
