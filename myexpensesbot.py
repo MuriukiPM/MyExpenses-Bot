@@ -3,6 +3,7 @@
 """
 @ author: PMuriuki
 """
+import sys
 from os import environ as env
 from telegram import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, RegexHandler, ConversationHandler, Filters
@@ -17,8 +18,15 @@ from bot.globals import CHOOSING, TYPING_REPLY
 # TODO: Add output message showing % of budgetary limit used per category
 # TODO: add a "sorry, that's not a valid choice" fallback for each handler
 def main():
+    secrets = ['TELEGRAM_BOT_TOKEN', 'URL_POST_EXPENSE', 'URL_SORTDESC', 'URL_CATEGORIES',
+               'URL_VIEW_EXPENSE', 'URL_USER_BY_CHATID', 'URL_POST_USER', 
+               'MONGO_HOST', 'MONGO_DATABASE_NAME', 'MONGO_COLLECTION_NAME', 
+               'DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_PORT']
+    if not all([secret in env for secret in secrets]): 
+        logger.error('Be sure to set all environment vars')
+        sys.exit(1)
     # Set up the Updater
-    updater = Updater(env.get("TOKEN"),use_context=True)
+    updater = Updater(env.get("TELEGRAM_BOT_TOKEN"),use_context=True)
     dispatcher = updater.dispatcher
     
     # Add dispatchers
