@@ -1,4 +1,4 @@
-from telegram import KeyboardButton, ReplyKeyboardMarkup
+from telegram import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 
 # Predefine Main menu keyboard
 mainMenu = [[KeyboardButton("New Expense")], 
@@ -48,27 +48,50 @@ months = [
     [KeyboardButton("July"), KeyboardButton("Aug"), KeyboardButton("Sept")],
     [KeyboardButton("Oct"), KeyboardButton("Nov"), KeyboardButton("Dec")]]
 
-newExpenseNoAmtMarkup = ReplyKeyboardMarkup(newExpenseNoAmt, resize_keyboard=True)
+expenseList = [[KeyboardButton("List Expenses By Count")],
+                [KeyboardButton("List Expenses By Date")],
+                [KeyboardButton("Main Menu")]]
 
-newExpenseNoPrfMarkup = ReplyKeyboardMarkup(newExpenseNoPrf, resize_keyboard=True)
+expenseSearch = [[KeyboardButton("Search Expenses By Expense ID")],
+                [KeyboardButton("Search Expenses By Keyphrase")],
+                [KeyboardButton("Main Menu")]]
 
-newExpenseNoDescrMarkup = ReplyKeyboardMarkup(newExpenseNoDescr, resize_keyboard=True)
+backnHomeInline = [[InlineKeyboardButton("Back", callback_data="/cancel"), 
+                    InlineKeyboardButton("Home", callback_data="/home")]]
 
-newExpenseNoTsMarkup = ReplyKeyboardMarkup(newExpenseNoTs, resize_keyboard=True)
+donenBacknHomeInline = [[InlineKeyboardButton("Done", callback_data="/done"),
+                        InlineKeyboardButton("Back", callback_data="/cancel"), 
+                        InlineKeyboardButton("Home", callback_data="/home")]]
 
-newExpenseNoCatMarkup = ReplyKeyboardMarkup(newExpenseNoCat, resize_keyboard=True)
+newExpenseNoAmtMarkup = ReplyKeyboardMarkup(newExpenseNoAmt, resize_keyboard=True, one_time_keyboard=True)
 
-budgetLimitsMarkup = ReplyKeyboardMarkup(budgetLimits, resize_keyboard=True)
+newExpenseNoPrfMarkup = ReplyKeyboardMarkup(newExpenseNoPrf, resize_keyboard=True, one_time_keyboard=True)
 
-expenseStatsMarkup = ReplyKeyboardMarkup(expenseStats, resize_keyboard=True)
+newExpenseNoDescrMarkup = ReplyKeyboardMarkup(newExpenseNoDescr, resize_keyboard=True, one_time_keyboard=True)
 
-newExpenseMarkup = ReplyKeyboardMarkup(newExpense, resize_keyboard=True)
+newExpenseNoTsMarkup = ReplyKeyboardMarkup(newExpenseNoTs, resize_keyboard=True, one_time_keyboard=True)
 
-setLimitsMarkup = ReplyKeyboardMarkup(setLimits, resize_keyboard=True)
+newExpenseNoCatMarkup = ReplyKeyboardMarkup(newExpenseNoCat, resize_keyboard=True, one_time_keyboard=True)
 
-monthsMarkup = ReplyKeyboardMarkup(months, resize_keyboard=True)
+budgetLimitsMarkup = ReplyKeyboardMarkup(budgetLimits, resize_keyboard=True, one_time_keyboard=True)
 
-mainMenuMarkup = ReplyKeyboardMarkup(mainMenu, resize_keyboard=True)
+expenseStatsMarkup = ReplyKeyboardMarkup(expenseStats, resize_keyboard=True, one_time_keyboard=True)
+
+expenseListMarkup = ReplyKeyboardMarkup(expenseList, resize_keyboard=True, one_time_keyboard=True)
+
+expenseSearchMarkup = ReplyKeyboardMarkup(expenseSearch, resize_keyboard=True, one_time_keyboard=True)
+
+newExpenseMarkup = ReplyKeyboardMarkup(newExpense, resize_keyboard=True, one_time_keyboard=True)
+
+setLimitsMarkup = ReplyKeyboardMarkup(setLimits, resize_keyboard=True, one_time_keyboard=True)
+
+monthsMarkup = ReplyKeyboardMarkup(months, resize_keyboard=True, one_time_keyboard=True)
+
+mainMenuMarkup = ReplyKeyboardMarkup(mainMenu, resize_keyboard=True, one_time_keyboard=True)
+
+backnHomeInlineMarkup = InlineKeyboardMarkup(backnHomeInline, resize_keyboard=True)
+
+donenBacknHomeInlineMarkup = InlineKeyboardMarkup(donenBacknHomeInline, resize_keyboard=True)
 
 # must follow a certain order
 expenseFlowMarkups = [	newExpenseNoTsMarkup, newExpenseNoDescrMarkup, newExpenseNoPrfMarkup, 
