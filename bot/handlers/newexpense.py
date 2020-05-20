@@ -12,7 +12,9 @@ from bot.globals import *
 
 # Flow for expense input begins here
 def newExpense (update: Update, context: CallbackContext):
-	"""Initiator for the expenses input flow"""
+	"""
+		Initiate the expenses input flow
+	"""
 	text = ("Select a field to fill in from below, once ready, tap Submit.")
 	context.bot.send_message(chat_id=update.message.chat_id,
 					text = text,
@@ -51,16 +53,20 @@ def timestamp(update: Update, context: CallbackContext):
 # TODO: Add a check to see if there is sufficient data depending on number of descr to query
 # TODO: For each of the top ten descriptions, attach the most common amount
 def description(update: Update, context: CallbackContext):
+	chat_ID = update.message.chat_id
 	#get the local time
 	dt0 = datetime.datetime.utcnow()+ datetime.timedelta(hours=UTC_OFFSET)
 	# get the date from 3 months back from now
 	for _ in range(3):  dt0 = utils.subtract_one_month(dt0)
-	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:10] #only the date, not time
+	date = dt0.strftime("%Y-%m-%d %H:%M:%S")[:10] #only the date, not 
+	# date = '2019-02-01'
+	utils.logger.debug("START DATE: "+date)
 	top_descr = []
 	# send a get request to obtain top ten results in a json
 	try:
-		context.bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
-		r = requests.get(env.get("URL_SORTDESC")+date)
+		context.bot.sendChatAction(chat_id=chat_ID, action='Typing')
+		r = requests.get(env.get("URL_SORTDESC"),
+						params={'chat_id':chat_ID,'date':date})		
 		response = r.json() 
 		if response['Success'] is not True:     # some error 
 			text = ("Failed!"
@@ -81,10 +87,10 @@ def description(update: Update, context: CallbackContext):
 				+"\n"
 				+"Type in the description. Or  /cancel  to return to choose other options."
 				+"\nOr  /home  to return to Main Menu")   
-		utils.logger.error(e)
+		utils.logger.error("failed to select description with error: "+repr(e))
 		reply_markup = ReplyKeyboardRemove()
 	context.user_data['currentExpCat'] = "Description"
-	context.bot.send_message(chat_id=update.message.chat_id,
+	context.bot.send_message(chat_id=chat_ID,
 					text = text,
 					reply_markup = reply_markup)
 	return TYPING_REPLY
@@ -94,10 +100,12 @@ def description(update: Update, context: CallbackContext):
 # TODO: Consider using userdata saved categories
 def category(update: Update, context: CallbackContext):
 	categories = []
+	chat_ID = update.message.chat_id
 	# get the categories
 	try:
-		context.bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
-		r = requests.get(env.get("URL_CATEGORIES"))
+		context.bot.sendChatAction(chat_id=chat_ID, action='Typing')
+		r = requests.get(env.get("URL_CATEGORIES"),
+						params={'chat_id':chat_ID})
 		response = r.json() 
 		if response['Success'] is not True:     # some error 
 			text = ("Failed!"
@@ -118,10 +126,10 @@ def category(update: Update, context: CallbackContext):
 				+"\n"
 				+"Type in the category. Or  /cancel  to choose other options."
 				+"\nOr  /home  to return to Main Menu")   
-		utils.logger.error(e)
+		utils.logger.error("failed to select category with error: "+repr(e))
 		reply_markup = ReplyKeyboardRemove()
 	context.user_data['currentExpCat'] = "Category" #update the check for most recently updated field
-	context.bot.send_message(chat_id=update.message.chat_id,
+	context.bot.send_message(chat_id=chat_ID,
 					text = text,
 					reply_markup = reply_markup)
 	
@@ -137,6 +145,7 @@ def proof(update: Update, context: CallbackContext):
 	context.bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = ReplyKeyboardRemove())
+	
 	return TYPING_REPLY
 
 # Create new expense 
@@ -149,14 +158,16 @@ def amount(update: Update, context: CallbackContext):
 	context.bot.send_message(chat_id=update.message.chat_id,
 					text = text,
 					reply_markup = ReplyKeyboardRemove())
+	
 	return TYPING_REPLY
 
 # Create new expense 
 # confirmation of entered value
 def verifyValue(update: Update, context: CallbackContext):
-	"""Verify various inputs to proceed"""
+	"""
+		Verify various inputs to proceed
+	"""
 	data = update.message.text #grab the reply text
-
 	# if the timestamp was just set sort the input
 	if (context.user_data['currentExpCat'] == 'Timestamp'):
 		try: #if datetime object can be obtained from input. expected to raise exception
@@ -198,7 +209,9 @@ def verifyValue(update: Update, context: CallbackContext):
 # Create new expense 
 # display and allow other field selection
 def nextExpenseField(update: Update, context: CallbackContext):
-	"""Provide user with keyboards to select other input categories"""
+	"""
+		Display keyboards to select other input categories
+	"""
 	# Choose relevant reply markup
 	markup = context.user_data['markups'][context.user_data['currentExpCat']]		
 	text = ("Great! Choose next option to populate." 
@@ -214,22 +227,26 @@ def nextExpenseField(update: Update, context: CallbackContext):
 # TODO: On successful submit, for the relevant budget limit, display value and
 # if no threshold set, ask if user wants to set the limits
 def postExpense(update: Update, context: CallbackContext):
+	chat_ID = update.message.chat_id
 	# Check for empty fields. Timestamp, Amount, Category has to be filled always
-	if context.user_data['input']['Amount'] and context.user_data['input']['Timestamp'] and context.user_data['input']['Category']:
+	required_inputs = ['Amount','Timestamp','Category']
+	if all([context.user_data['input'][key] for key in required_inputs]):
+	# if all([inputs['Amount'], context.user_data['input']['Timestamp'], context.user_data['input']['Category']):
 		# Initiate the POST. If successfull, you will get a primary key value
 		# and a Success bool as True
 		try:
-			context.bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
+			context.bot.sendChatAction(chat_id=chat_ID, action='Typing')
 			r = requests.post(env.get("URL_POST_EXPENSE"),
-							json={	"Timestamp":context.user_data['input']['Timestamp'],
-									"Description":context.user_data['input']['Description'],
-									"Proof":context.user_data['input']['Proof'],
-									"Amount":context.user_data['input']['Amount'],
-									"Category":context.user_data['input']['Category']
-									}
-								)
+							json={	"timestamp":context.user_data['input']['Timestamp'],
+									"description":context.user_data['input']['Description'],
+									"proof":context.user_data['input']['Proof'],
+									"amount":context.user_data['input']['Amount'],
+									"category":context.user_data['input']['Category']
+								},
+							params={'chat_id':chat_ID})
+			utils.logger.debug('request: %s', r.url)
 			response = r.json() 
-			utils.logger.debug(response)
+			utils.logger.debug("POST response: "+repr(response))
 			if response['Success'] is not True:     # some error 
 				text = ("Failed!"
 						+"\nComment: " +response['Comment']
@@ -241,17 +258,17 @@ def postExpense(update: Update, context: CallbackContext):
 				context.user_data['input']['Proof'] = []
 				context.user_data['input']['Category'] = []
 				context.user_data['input']['Amount'] = []
-				text = ("Post Successful! Post id is: "+response['Comment']
+				text = ("Expense recorded! Expense id is: "+str(response['Data']['id'])
 						+"\nPlease select an option from below.")
 		except Exception as e:
 			text = ("Something went wrong."
 					+"\n"
 					+"\nNo connection to the server.")   
-			utils.logger.error("Post failed with error: "+str(e))
+			utils.logger.error("Post failed with error: "+repr(e))
 	else:	# fields empty or amount empty
 		text = ("Please complete filling in the fields.")
 	
-	context.bot.send_message(chat_id=update.message.chat_id,
+	context.bot.send_message(chat_id=chat_ID,
                     text = text,
                     reply_markup = reply_markups.newExpenseMarkup)
 	
