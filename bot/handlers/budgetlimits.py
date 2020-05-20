@@ -27,13 +27,17 @@ def budget(update: Update, context: CallbackContext):
 # select the category
 # TODO: Add check for whether all limits have been set and transition to update?
 def setBudgetLimits(update: Update, context: CallbackContext):
-	"""Initiate flow to set values for each limit category"""
+	"""
+		Initiate flow to set values for each limit category
+	"""
+	chat_ID = update.message.chat_id
 	#get current categories from pgdb if not already fetched
 	if len(context.user_data['limits']) == 0: #not yet fetched
 		categories = []
 		try:
-			context.bot.sendChatAction(chat_id=update.message.chat_id, action='Typing')
-			r = requests.get(env.get("URL_CATEGORIES"))
+			context.bot.sendChatAction(chat_id=chat_ID, action='Typing')
+			r = requests.get(env.get("URL_CATEGORIES"),
+							params={'chat_id':chat_ID})
 			response = r.json() 
 			if response['Success'] is not True:     # some error 
 				text = ("Failed!"
