@@ -44,4 +44,4 @@ Run on cloud instance using image from container repo (requires access to pull i
 $ docker container run -d --rm --network="host" gcr.io/$project/myexpensesbot:$(git rev-parse HEAD)
 ```
 
-[env]: </.env-sample>
+[env]: </.env_sample>
