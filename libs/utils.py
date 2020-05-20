@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def convertJson(data):
     facts = list()
     for key, value in data.items():
-        if key !='ID' and key !='ChatID':
+        if key !='ID' and key !='ChatID' and key != 'userID':
             facts.append('{} : {}'.format(key, value))
 
     return ("\n".join(facts).join(['\n', '\n']))
@@ -43,9 +43,10 @@ def convertList(data):
 
 # Accept list of dicts object and dict object and return formatted strings
 def convertExp_Lim(exp_data, lim_data):
-    """Given the values of expenses per category and 
-       the values of the limits, return a 
-       formatted string with the expenses and limits
+    """
+        Given the values of expenses per category and 
+        the values of the limits, return a 
+        formatted string with the expenses and limits
     """
     facts = list()
     for item in exp_data:
@@ -89,8 +90,9 @@ def dev():
     return cacert_path
 
 def connect():
-    """ Connect to the PostgreSQL database server and quick test"""
-    
+    """
+        Connect to the PostgreSQL database server and quick test
+    """
     conn = None
     err = None
     try: 
@@ -118,11 +120,20 @@ def connect():
        
     return conn, err
 
-def getsqlrows(conn):
-    """getsqlrows queries the database for rows"""
+def getsqlrows(conn, chat_id: str):
+    """
+    getsqlrows queries the database for rows
+    """
     try:
         cur = conn.cursor()
-        cur.execute("SELECT * from expenses")
+        cur.execute('''
+                    SELECT e.pkey, e.timestamp, e.description, e.proof, e.amount, e.category, e.user_id 
+                    FROM expenses as e 
+                    WHERE e.user_id IN (SELECT u.id 
+                                        FROM users as u 
+                                        WHERE u.chat_id=%s);
+                    '''
+                    , (chat_id,))
         rows = cur.fetchall()
         logger.info("Num of rows: "+str(len(rows)))
         cur.close()
@@ -135,10 +146,34 @@ def getsqlrows(conn):
         return None, error
 
 def getdatatable(sqlrows):
-    """getdatatable creates a table with expense rows from rows returned from sql query"""
-    month_map = {1:'Jan',2:'Feb',3:'Mar',4:'April',5:'May',6:'June',7:'July',8:'Aug',9:'Sept',10:'Oct',11:'Nov',12:'Dec'}
-    day_map = {0:'Mon',1:'Tue',2:'Wed',3:'Thu',4:'Fri',5:'Sat',6:'Sun'}
-    df = pd.DataFrame(data=sqlrows,columns=['rowid','timestamp','description','proof','amount','category'])
+    """
+        creates a table with expense rows from rows returned from sql query
+    """
+    month_map = {
+        1:'Jan',
+        2:'Feb',
+        3:'Mar',
+        4:'April',
+        5:'May',
+        6:'June',
+        7:'July',
+        8:'Aug',
+        9:'Sept',
+        10:'Oct',
+        11:'Nov',
+        12:'Dec'
+        }
+    day_map = {
+        0:'Mon',
+        1:'Tue',
+        2:'Wed',
+        3:'Thu',
+        4:'Fri',
+        5:'Sat',
+        6:'Sun'
+        }
+    df = pd.DataFrame(data=sqlrows,
+                    columns=['rowid','timestamp','description','proof','amount','category','user_id'])
     df_raw = df.copy()
     df['timestamp']=pd.to_datetime(df['timestamp'])
     df['hour']=df['timestamp'].apply(lambda time: time.hour)
@@ -149,12 +184,15 @@ def getdatatable(sqlrows):
     return df_raw, df
 
 def gettotals(sqlrows):
-    """gettotals creates a multi-index table of sum of expenses sorted by category and month"""
+    """
+        creates a multi-index table of sum of expenses sorted by category and month
+    """
     _, df = getdatatable(sqlrows=sqlrows)
     # months = df.month.unique()
-    months = ['Jan', 'Feb', 'Mar', 'April', 'May', 'June', 'July', 'Aug', 'Sept', 'Dec']
+    months = ['Jan', 'Feb', 'Mar', 'April', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
     MonthnCat = df.groupby(['category','year','month'])['amount'].sum().unstack(1)
-    MonthnCat = MonthnCat.reindex(pd.MultiIndex.from_product([MonthnCat.index.levels[0], months], names=['category', 'month']))
+    MonthnCat = MonthnCat.reindex(pd.MultiIndex.from_product([MonthnCat.index.levels[0], months], 
+                                names=['category', 'month']))
     MonthnCat.fillna(value=0.0, inplace=True)
     MonthnCat = MonthnCat.astype('int')
 
