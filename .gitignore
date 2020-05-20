@@ -133,6 +133,7 @@ dmypy.json
 
 # Other
 *.out
+NOTES.md
 
 # Secrets
 config.ini
