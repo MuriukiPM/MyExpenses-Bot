@@ -51,8 +51,19 @@ def start(update: Update, context: CallbackContext):
 				utils.logger.debug('request: %s', r.url)
 				response = r.json()
 				utils.logger.debug("POST USER: "+repr(response))
-				if response['Success'] is True:     # user found 
-					utils.logger.debug("User account created!")
+				if response['Success'] is True:     # user found
+					message = "New user: {user}".format(user=repr(response['Data']))
+					# utils.logger.debug("New User"+message)
+					payload = {'chat_id': env.get("ADMIN_CHAT_ID"),
+								'text': message,
+								'parse_mode': 'HTML'}
+					try: # notify admin of new user
+						r = requests.post(url="https://api.telegram.org/bot{token}/sendMessage".format(token=env.get("ADMIN_BOT_TOKEN")),
+										data=payload)
+						response = r.json()
+						utils.logger.info('Sent: '+str(response['ok']))
+					except Exception as e:
+						utils.logger.error("Admin comm error"+repr(e))
 				else:
 					utils.logger.error("User account create failed")
 			except Exception as e:
@@ -122,8 +133,24 @@ def home(update: Update, context: CallbackContext):
 	context.user_data['inputYear'] = ''
 	#send
 	context.bot.send_message(chat_id=chat_ID,
-		text="Main Options",
-		reply_markup = reply_markups.mainMenuMarkup)
+							text="**Main Options**",
+							parse_mode = "Markdown",
+							reply_markup = reply_markups.mainMenuMarkup)
+	
+	return ConversationHandler.END
+
+def homeInlineButton(update: Update, context: CallbackContext):
+	context.user_data['currentExpCat'] = []
+	context.user_data['limits'] = {}
+	context.user_data['inputYear'] = ''
+	context.user_data['inputYear'] = ''
+	context.user_data['inputMonth'] = ''
+	context.user_data['inputDay'] = ''
+	context.bot.send_message(chat_id=update.callback_query.message.chat_id,
+                            text="**Main Options**",
+                            parse_mode = "Markdown",
+                            reply_markup = reply_markups.mainMenuMarkup) 
+    
 	return ConversationHandler.END
 
 # Error handler
